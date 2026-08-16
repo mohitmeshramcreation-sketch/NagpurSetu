@@ -190,26 +190,28 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({
                   LOCATION IDENTIFIED
                 </div>
                 <div className="h-44 rounded-xl overflow-hidden border border-slate-200 bg-white relative flex flex-col justify-between p-3">
-                  {/* SVG mini map preview */}
-                  <div className="absolute inset-0 bg-[#E5E9EE]">
-                    <svg className="w-full h-full object-cover" viewBox="0 0 300 150">
-                      <rect width="300" height="150" fill="#E5E9EE" />
-                      <path d="M 0,30 Q 120,80 300,40" stroke="#CBD5E1" strokeWidth="10" fill="none" />
-                      <path d="M 40,150 Q 150,60 280,0" stroke="#FDE68A" strokeWidth="8" fill="none" />
-                      <path d="M 160,150 L 170,0" stroke="#93C5FD" strokeWidth="6" fill="none" />
-                      <circle cx="150" cy="70" r="7" fill="#EF4444" stroke="#FFF" strokeWidth="2" />
+                  {/* Interactive Map Visual */}
+                  <div className="absolute inset-0 bg-[#0F172A]">
+                    <svg className="w-full h-full object-cover opacity-80" viewBox="0 0 300 150">
+                      <rect width="300" height="150" fill="#0F172A" />
+                      <ellipse cx="70" cy="90" rx="30" ry="18" fill="#0369A1" opacity="0.4" />
+                      <path d="M 0,60 Q 150,80 300,50" stroke="#475569" strokeWidth="8" fill="none" />
+                      <path d="M 0,60 Q 150,80 300,50" stroke="#CBD5E1" strokeWidth="2" strokeDasharray="5 3" fill="none" />
+                      <path d="M 140,0 L 145,150" stroke="#F59E0B" strokeWidth="5" fill="none" />
+                      <circle cx="145" cy="70" r="14" fill="#EF4444" opacity="0.3" className="animate-ping" />
+                      <circle cx="145" cy="70" r="6" fill="#EF4444" stroke="#FFF" strokeWidth="2" />
                     </svg>
                   </div>
 
                   <div className="relative z-10 flex justify-end">
-                    <span className="bg-white/90 text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-md shadow-2xs">
+                    <span className="bg-slate-900/90 text-white border border-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md shadow-2xs">
                       {draftReport?.ward || 'Dharampeth (Ward 4)'}
                     </span>
                   </div>
 
-                  <div className="relative z-10 bg-white border border-slate-200 rounded-lg p-2 flex items-center gap-2 shadow-xs">
-                    <MapPin className="w-4 h-4 text-red-600 shrink-0" />
-                    <span className="text-xs font-semibold text-slate-900 truncate">
+                  <div className="relative z-10 bg-slate-900/90 border border-slate-700 backdrop-blur-xs rounded-lg p-2 flex items-center gap-2 shadow-xs">
+                    <MapPin className="w-4 h-4 text-red-500 shrink-0" />
+                    <span className="text-xs font-semibold text-white truncate">
                       {draftReport?.location || '42 Dharampeth Extension, Nagpur'}
                     </span>
                   </div>

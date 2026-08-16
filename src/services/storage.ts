@@ -3,12 +3,12 @@ import { INITIAL_CASES, INITIAL_NOTIFICATIONS, INITIAL_OFFICER, INITIAL_USER } f
 import { FirebaseDataService } from './firebaseDataService';
 
 const STORAGE_KEYS = {
-  CASES: 'nagpursetu_cases_v2',
-  NOTIFICATIONS: 'nagpursetu_notifications_v2',
-  USER: 'nagpursetu_user_v2',
-  ACTIVE_ROLE: 'nagpursetu_active_role_v2',
-  CURRENT_LANGUAGE: 'nagpursetu_lang_v2',
-  DRAFT_CHAT: 'nagpursetu_draft_chat_v2',
+  CASES: 'nagpursetu_cases_v3_clean',
+  NOTIFICATIONS: 'nagpursetu_notifications_v3_clean',
+  USER: 'nagpursetu_user_v3_clean',
+  ACTIVE_ROLE: 'nagpursetu_active_role_v3_clean',
+  CURRENT_LANGUAGE: 'nagpursetu_lang_v3_clean',
+  DRAFT_CHAT: 'nagpursetu_draft_chat_v3_clean',
 };
 
 // Event listener mechanism for cross-component reactivity

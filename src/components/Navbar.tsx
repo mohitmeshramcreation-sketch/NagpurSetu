@@ -245,34 +245,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               )}
             </div>
-
-            {/* Quick Portal Switcher (Citizen vs Officer Portal) */}
-            <div className="border-l border-slate-200 pl-3 flex items-center">
-              <button
-                onClick={() => {
-                  const nextRole = activeRole === 'citizen' ? 'officer' : 'citizen';
-                  onRoleChange(nextRole);
-                  if (nextRole === 'officer') {
-                    navigate('/officer');
-                  } else {
-                    navigate('/');
-                  }
-                }}
-                className={`p-2 rounded-full border transition-all ${
-                  activeRole === 'officer'
-                    ? 'bg-amber-50 text-amber-900 border-amber-300'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-                title={`Switch to ${activeRole === 'citizen' ? 'Officer / Admin Portal' : 'Citizen View'}`}
-                id="role-switch-button"
-              >
-                {activeRole === 'officer' ? (
-                  <Shield className="w-4 h-4 text-blue-700" />
-                ) : (
-                  <User className="w-4 h-4 text-slate-700" />
-                )}
-              </button>
-            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -355,23 +327,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               </div>
             )}
-
-            <button
-              onClick={() => {
-                const nextRole = activeRole === 'citizen' ? 'officer' : 'citizen';
-                onRoleChange(nextRole);
-                setMobileMenuOpen(false);
-                if (nextRole === 'officer') {
-                  navigate('/officer');
-                } else {
-                  navigate('/');
-                }
-              }}
-              className="w-full text-left px-3 py-2 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 flex items-center gap-2"
-            >
-              <Shield className="w-4 h-4 text-blue-700" />
-              <span>Mode: {activeRole === 'citizen' ? 'Citizen (Switch to Officer)' : 'Officer (Switch to Citizen)'}</span>
-            </button>
           </div>
         </div>
       )}

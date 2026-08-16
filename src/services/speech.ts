@@ -102,9 +102,43 @@ export class SpeechService {
     try {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95;
+      utterance.rate = 0.92; // Slightly natural pace for clarity
       utterance.pitch = 1.0;
-      utterance.lang = lang === 'mr' ? 'mr-IN' : lang === 'hi' ? 'hi-IN' : 'en-IN';
+
+      // Determine proper BCP-47 tag
+      let targetLang = 'en-IN';
+      if (lang === 'mr' || lang === 'marathi') {
+        targetLang = 'mr-IN';
+      } else if (lang === 'hi' || lang === 'hindi' || lang === 'hinglish') {
+        targetLang = 'hi-IN';
+      } else {
+        targetLang = 'en-IN';
+      }
+
+      utterance.lang = targetLang;
+
+      // Try to bind the best matching native voice if available in browser
+      const voices = window.speechSynthesis.getVoices();
+      if (voices && voices.length > 0) {
+        let matchedVoice = null;
+        if (targetLang === 'mr-IN') {
+          matchedVoice =
+            voices.find((v) => v.lang.includes('mr') || v.name.toLowerCase().includes('marathi')) ||
+            voices.find((v) => v.lang.includes('hi') || v.name.toLowerCase().includes('hindi')) ||
+            voices.find((v) => v.lang.includes('IN'));
+        } else if (targetLang === 'hi-IN') {
+          matchedVoice =
+            voices.find((v) => v.lang.includes('hi') || v.name.toLowerCase().includes('hindi') || v.name.toLowerCase().includes('lekha') || v.name.toLowerCase().includes('neerja')) ||
+            voices.find((v) => v.lang.includes('IN'));
+        } else {
+          matchedVoice = voices.find((v) => v.lang.includes('en-IN') || v.name.toLowerCase().includes('india'));
+        }
+
+        if (matchedVoice) {
+          utterance.voice = matchedVoice;
+        }
+      }
+
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.warn('Speech synthesis failed:', e);

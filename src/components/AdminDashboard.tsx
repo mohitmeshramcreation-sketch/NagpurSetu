@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { StorageService, subscribeToStorage } from '../services/storage';
 import { CaseItem, Department, PriorityLevel, SlaStatus, UserRole } from '../types';
+import { NagpurMapViewer } from './NagpurMapViewer';
 
 interface AdminDashboardProps {
   navigate: (route: string) => void;
@@ -312,49 +313,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
 
-        {/* 4 Metric Cards (Matching Screen 5) */}
+        {/* 4 Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Card 1 */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 shadow-2xs">
             <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              New Cases (24h)
+              Total Active Cases
             </div>
-            <div className="text-3xl font-extrabold text-[#0B1E38]">142</div>
-            <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
-              <span>↑ 12% vs yesterday</span>
+            <div className="text-3xl font-extrabold text-[#0B1E38]">{cases.filter(c => c.status !== 'Closed' && c.status !== 'Resolved').length}</div>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+              <span>{cases.length} total logged</span>
             </div>
           </div>
 
           {/* Card 2 */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 shadow-2xs">
             <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Assigned to Me
+              In Progress
             </div>
-            <div className="text-3xl font-extrabold text-[#0B1E38]">28</div>
+            <div className="text-3xl font-extrabold text-[#0B1E38]">{cases.filter(c => c.status === 'In Progress' || c.status === 'Assigned').length}</div>
             <div className="text-xs text-slate-500 font-medium">
-              Across 3 departments
+              Field crews dispatched
             </div>
           </div>
 
           {/* Card 3 */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 shadow-2xs">
             <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Overdue SLAs
+              Overdue / Warning SLAs
             </div>
-            <div className="text-3xl font-extrabold text-red-600">7</div>
-            <div className="text-xs text-red-600 font-semibold">
-              Immediate action required
+            <div className={`text-3xl font-extrabold ${cases.filter(c => c.slaStatus === 'Warning' || c.slaStatus === 'Overdue').length > 0 ? 'text-red-600' : 'text-slate-800'}`}>
+              {cases.filter(c => c.slaStatus === 'Warning' || c.slaStatus === 'Overdue').length}
+            </div>
+            <div className="text-xs text-slate-500 font-semibold">
+              SLA attention flags
             </div>
           </div>
 
           {/* Card 4 */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 shadow-2xs">
             <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Resolved (Week)
+              Resolved Cases
             </div>
-            <div className="text-3xl font-extrabold text-[#0B1E38]">315</div>
+            <div className="text-3xl font-extrabold text-[#0B1E38]">{cases.filter(c => c.status === 'Resolved' || c.status === 'Closed').length}</div>
             <div className="text-xs text-emerald-600 font-semibold">
-              94% resolution rate
+              Completed cases
             </div>
           </div>
         </div>
@@ -591,6 +594,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="text-xs text-slate-700 leading-relaxed bg-white border border-slate-200 p-3.5 rounded-xl">
               <span className="font-bold text-slate-900 block mb-1">Issue Description:</span>
               {selectedCase.description}
+            </div>
+
+            {/* Spatial Location Map */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-700">GIS Location Pinned:</span>
+              <NagpurMapViewer
+                selectedLocation={selectedCase.location}
+                selectedWard={selectedCase.ward}
+                height="h-44"
+                interactive={false}
+              />
             </div>
 
             {/* Photo Evidence if present */}

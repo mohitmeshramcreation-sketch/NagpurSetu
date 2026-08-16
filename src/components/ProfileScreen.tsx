@@ -91,19 +91,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               Manage your contact information, language, and accessibility preferences.
             </p>
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                const next = activeRole === 'citizen' ? 'officer' : 'citizen';
-                onRoleChange(next);
-                if (next === 'officer') navigate('/officer');
-              }}
-              className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-            >
-              Mode: {activeRole === 'citizen' ? 'Citizen (Switch to Officer)' : 'Officer (Switch to Citizen)'}
-            </button>
-          </div>
         </div>
 
         {/* Account Authentication Banner */}
@@ -287,10 +274,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <button
               type="button"
               onClick={handleResetDemoData}
-              className="flex items-center gap-1.5 text-xs text-red-600 font-bold hover:underline cursor-pointer"
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-red-600 font-semibold transition cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Demo Cases</span>
+              <span>Clear Local Data</span>
             </button>
 
             <button

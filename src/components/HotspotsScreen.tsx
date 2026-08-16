@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { HOTSPOT_CLUSTERS } from '../data/initialData';
 import { HotspotCluster } from '../types';
+import { NagpurMapViewer } from './NagpurMapViewer';
 
 interface HotspotsScreenProps {
   navigate: (route: string) => void;
@@ -106,6 +107,14 @@ export const HotspotsScreen: React.FC<HotspotsScreenProps> = ({
               </span>
             </div>
 
+            {/* Spatial GIS Map Component */}
+            <NagpurMapViewer
+              selectedLocation={selectedCluster.name}
+              selectedWard={selectedCluster.ward}
+              height="h-52"
+              interactive={false}
+            />
+
             <div className="space-y-2 text-xs">
               <span className="font-bold text-slate-700">Cluster Analysis & Ground Realities:</span>
               <p className="text-slate-600 bg-slate-50 p-4 rounded-xl leading-relaxed">
@@ -136,3 +145,4 @@ export const HotspotsScreen: React.FC<HotspotsScreenProps> = ({
     </div>
   );
 };
+

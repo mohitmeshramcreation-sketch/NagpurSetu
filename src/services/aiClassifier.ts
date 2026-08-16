@@ -17,19 +17,26 @@ export interface ClassificationResult {
   duplicateRisk?: boolean;
 }
 
-export const classifyUserMessage = (text: string, currentLang: string = 'en'): ClassificationResult => {
+// Local fast rule-based classifier (instant offline / fallback engine)
+export const classifyUserMessageLocal = (text: string, currentLang: string = 'mr'): ClassificationResult => {
   const lower = text.toLowerCase().trim();
 
-  // Detect language
-  let detectedLang: Language = 'en';
+  // Detect language accurately
+  let detectedLang: Language = currentLang === 'mr' ? 'mr' : currentLang === 'hi' ? 'hi' : 'en';
+
   if (/[\u0900-\u097F]/.test(text)) {
-    if (/आहे|नाही|माझ्या|घराजवळ|रस्त्यावर|तुंबली|कचरा/.test(text)) {
+    // Check Devanagari vocabulary for Marathi vs Hindi
+    if (/आहे|नाही|माझ्या|घराजवळ|रस्त्यावर|तुंबली|कचरा|खड्डा|झाला|करा|दाखला|दिवे|पाणी|नाली/.test(text)) {
       detectedLang = 'mr';
     } else {
       detectedLang = 'hi';
     }
-  } else if (/mein|nahi|hai|kahan|karo|bhi|raha|gaya|paani|sadak|khadda|kachra|mera|meri/.test(lower)) {
-    detectedLang = 'hinglish';
+  } else if (/mein|nahi|hai|kahan|karo|bhi|raha|gaya|paani|sadak|khadda|kachra|mera|meri|band|ho|gayi/.test(lower)) {
+    detectedLang = 'hi';
+  } else if (/ahe|nahi|mazya|gharjaval|rastya|pani|diwa|kiti|kuthe/.test(lower)) {
+    detectedLang = 'mr';
+  } else if (currentLang === 'mr' || currentLang === 'hi') {
+    detectedLang = currentLang;
   }
 
   // Check for Case Tracking intent
@@ -40,13 +47,14 @@ export const classifyUserMessage = (text: string, currentLang: string = 'en'): C
     lower.includes('kya hua') ||
     lower.includes('complaint status') ||
     lower.includes('mera complaint') ||
-    lower.includes('माझी तक्रार')
+    lower.includes('माझी तक्रार') ||
+    lower.includes('तक्रार स्थिती')
   ) {
     let reply = 'Here are your recent registered civic cases and their live departmental status:';
     if (detectedLang === 'mr') {
       reply = 'येथे तुमच्या नुकत्याच नोंदवलेल्या तक्रारी आणि त्यांची सद्यस्थिती आहे:';
     } else if (detectedLang === 'hi' || detectedLang === 'hinglish') {
-      reply = 'Aapki darj ki gayi shikayaton ka live status niche dekh sakte hain:';
+      reply = 'आपकी दर्ज की गई शिकायतों का लाइव स्टेटस नीचे देख सकते हैं:';
     }
 
     return {
@@ -76,7 +84,7 @@ export const classifyUserMessage = (text: string, currentLang: string = 'en'): C
     lower.includes('उचलला नाही')
   ) {
     let reply =
-      'Koi problem nahi. Main aapki madad karta hoon. Problem exactly kahan hai? Kripya apna location share karein.';
+      'नमस्ते, मैंने कचरे की समस्या नोट कर ली है। कृपया अपना सटीक स्थान या गली का नाम बताएं ताकि सफाई टीम भेजी जा सके।';
     if (detectedLang === 'mr') {
       reply = 'नक्कीच, मी मदत करतो. कचरा कोणत्या ठिकाणी साचला आहे? कृपया आपले अचूक ठिकाण शेअर करा.';
     } else if (detectedLang === 'en') {
@@ -112,7 +120,7 @@ export const classifyUserMessage = (text: string, currentLang: string = 'en'): C
     lower.includes('damar')
   ) {
     let reply =
-      'Main road maintenance team ko alert kar raha hoon. Pothole ka exact location batayein ya map par pin karein.';
+      'सड़क और गड्ढे की शिकायत दर्ज कर ली गई है। कृपया सटीक स्थान बताएं या मैप पर मार्क करें।';
     if (detectedLang === 'mr') {
       reply = 'मी रस्ता दुरुस्ती विभागाला त्वरित सूचित करत आहे. खड्ड्याचे अचूक ठिकाण मॅपवर निवडा किंवा पत्ता सांगा.';
     } else if (detectedLang === 'en') {
@@ -123,7 +131,7 @@ export const classifyUserMessage = (text: string, currentLang: string = 'en'): C
 
     return {
       intent: 'complaint',
-      category: 'Roads & Traffic - Pothole/Drainage',
+      category: 'Roads & Traffic - Potholes',
       department: 'Roads & Traffic',
       title: 'Damaged Road Surface / Pothole',
       locationHint: isVarietySquare ? 'Near Variety Square, Dharampeth, Nagpur' : undefined,
@@ -153,7 +161,7 @@ export const classifyUserMessage = (text: string, currentLang: string = 'en'): C
     lower.includes('gutter')
   ) {
     let reply =
-      'Drainage issue note kar liya gaya hai. Drainage team ko dispatch karne ke liye kripya location share karein.';
+      'नाली और सीवरेज की समस्या नोट कर ली गई है। ड्रेनेज टीम भेजने के लिए कृपया लोकेशन शेयर करें।';
     if (detectedLang === 'mr') {
       reply = 'नाली तुंबल्याची तक्रार नोंदवली आहे. सांडपाणी विभागासाठी कृपया अचूक ठिकाण शेअर करा.';
     } else if (detectedLang === 'en') {
@@ -187,7 +195,7 @@ export const classifyUserMessage = (text: string, currentLang: string = 'en'): C
     lower.includes('diwa')
   ) {
     let reply =
-      'Streetlight band hone ki shikayat note ki gayi hai. Pole number ya location batayein taaki electrical team lamp badal sake.';
+      'स्ट्रीट लाइट बंद होने की शिकायत दर्ज कर ली गई है। कृपया पोल नंबर या सटीक गली का नाम बताएं।';
     if (detectedLang === 'mr') {
       reply = 'पथदिव्यांची तक्रार नोंदवून घेतली आहे. कृपया खांब क्रमांक किंवा ठिकाण सांगा.';
     } else if (detectedLang === 'en') {
@@ -220,7 +228,7 @@ export const classifyUserMessage = (text: string, currentLang: string = 'en'): C
     lower.includes('pipe leak')
   ) {
     let reply =
-      'Water Works Department ko inform kiya ja raha hai. Aapka area aur tap pressure issue share karein.';
+      'जलप्रदाय विभाग (Water Works) को सूचित किया जा रहा है। कृपया अपना इलाका और नल का प्रेशर बताएं।';
     if (detectedLang === 'mr') {
       reply = 'पाणीपुरवठा विभागाला सूचित केले जात आहे. आपला परिसर आणि समस्येचे ठिकाण सांगा.';
     } else if (detectedLang === 'en') {
@@ -300,3 +308,39 @@ export const classifyUserMessage = (text: string, currentLang: string = 'en'): C
     suggestedAction: 'categories',
   };
 };
+
+// Async hybrid classifier calling the server-side Gemini endpoint with instant fallback
+export const classifyUserMessage = async (
+  text: string,
+  history: Array<{ sender: string; text: string }> = [],
+  currentLang: string = 'en'
+): Promise<ClassificationResult> => {
+  try {
+    const res = await fetch('/api/ai/classify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text,
+        history,
+        language: currentLang,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Server returned ${res.status}`);
+    }
+
+    const data = await res.json();
+    if (data && data.conversationalReply) {
+      return data as ClassificationResult;
+    }
+  } catch (err) {
+    console.warn('Backend AI service fallback triggered:', err);
+  }
+
+  // Gracefully fallback to deterministic local engine
+  return classifyUserMessageLocal(text, currentLang);
+};
+

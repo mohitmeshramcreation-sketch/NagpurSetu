@@ -22,12 +22,18 @@ import {
   HelpCircle,
   CheckCircle,
   FileCheck,
-  AlertCircle
+  AlertCircle,
+  Loader2,
+  Navigation,
+  Globe,
+  Volume2,
+  Languages
 } from 'lucide-react';
 import { StorageService } from '../services/storage';
 import { classifyUserMessage, ClassificationResult } from '../services/aiClassifier';
 import { SpeechService } from '../services/speech';
 import { CaseItem, ChatMessage, Department } from '../types';
+import { NagpurMapViewer, NAGPUR_LOCALITIES, NagpurLocation } from './NagpurMapViewer';
 
 interface TalkScreenProps {
   navigate: (route: string) => void;
@@ -47,6 +53,12 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
   onProceedToReview,
 }) => {
   // State
+  const [userSelectedLang, setUserSelectedLang] = useState<'mr' | 'hi' | 'en'>(() => {
+    const saved = StorageService.getLanguage();
+    if (saved === 'mr' || saved === 'hi' || saved === 'en') return saved;
+    return 'mr'; // Default friendly Marathi for Nagpur
+  });
+
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [hasStartedConversation, setHasStartedConversation] = useState(false);
@@ -54,6 +66,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
   const [recentCases, setRecentCases] = useState<CaseItem[]>([]);
   const [helpMeModeActive, setHelpMeModeActive] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Garbage Pickup');
+  const [isAiThinking, setIsAiThinking] = useState(false);
   
   // Current extraction state for ongoing report
   const [currentLocation, setCurrentLocation] = useState('42 Dharampeth Extension, Nagpur');
@@ -79,7 +92,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, hasStartedConversation]);
+  }, [messages, hasStartedConversation, isAiThinking]);
 
   // Handle voice speech
   const toggleListening = () => {
@@ -89,7 +102,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
     } else {
       setIsListening(true);
       const started = SpeechService.startListening(
-        'hi',
+        userSelectedLang,
         ({ transcript, isFinal }) => {
           setInputText(transcript);
           if (isFinal) {
@@ -114,7 +127,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
   };
 
   // Send message
-  const handleSendMessage = (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend !== undefined ? textToSend : inputText).trim();
     if (!text) return;
 
@@ -134,11 +147,18 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
       timestamp: 'Just now',
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const nextMessages = [...messages, userMsg];
+    setMessages(nextMessages);
+    setIsAiThinking(true);
 
-    // AI Classification
-    const classification = classifyUserMessage(text);
+    // AI Classification (async Gemini model with instant fallback) passing user's preferred language
+    const classification = await classifyUserMessage(
+      text,
+      nextMessages.slice(-6).map((m) => ({ sender: m.sender, text: m.text })),
+      userSelectedLang
+    );
     setActiveClassification(classification);
+    setIsAiThinking(false);
 
     // Auto-update selected category in help me mode
     if (classification.category.includes('Road')) setSelectedCategory('Road & Potholes');
@@ -147,7 +167,14 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
     else if (classification.category.includes('Electric') || classification.category.includes('Streetlight')) setSelectedCategory('Streetlight Issue');
     else if (classification.category.includes('Drainage') || classification.category.includes('Sewage')) setSelectedCategory('Drainage & Sewage');
 
-    // Instant AI response with zero delay
+    if (classification.locationHint) {
+      setCurrentLocation(classification.locationHint);
+    }
+    if (classification.wardHint) {
+      setCurrentWard(classification.wardHint);
+    }
+
+    // AI response bubble
     const botMsg: ChatMessage = {
       id: `msg-bot-${Date.now()}`,
       sender: 'assistant',
@@ -157,7 +184,10 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
     };
 
     setMessages((prev) => [...prev, botMsg]);
-    SpeechService.speak(classification.conversationalReply, classification.detectedLanguage);
+
+    // Speak in the specific language (Marathi / Hindi / English)
+    const voiceLang = classification.detectedLanguage || userSelectedLang;
+    SpeechService.speak(classification.conversationalReply, voiceLang);
   };
 
   // Quick Prompt click
@@ -166,43 +196,60 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
     handleSendMessage(prompt);
   };
 
-  // Handle Location Sharing
+  // Handle Location Sharing via Geolocation with fallback
   const handleShareLocation = () => {
     setIsLocating(true);
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setIsLocating(false);
-          setCurrentLocation('Near Variety Square, Dharampeth, Nagpur - 440010');
+          const loc = `42 Dharampeth Extension, Nagpur (${pos.coords.latitude.toFixed(4)}° N, ${pos.coords.longitude.toFixed(4)}° E)`;
+          setCurrentLocation(loc);
           setCurrentWard('Dharampeth (Ward 4)');
           
           const confirmMsg: ChatMessage = {
             id: `msg-loc-${Date.now()}`,
             sender: 'assistant',
-            text: '📍 Location pinned: 42 Dharampeth Extension, Nagpur (Ward 4). Everything looks set! Would you like to review and submit the report?',
+            text: `📍 GPS Location Locked: ${loc}. Pinned to Dharampeth Zone 2. You can now confirm details and proceed to review.`,
             timestamp: 'Just now',
             widgetType: 'case_summary',
           };
           setMessages((prev) => [...prev, confirmMsg]);
         },
-        (err) => {
+        () => {
           setIsLocating(false);
-          setCurrentLocation('42 Dharampeth Extension, Nagpur');
+          setCurrentLocation('Variety Square, West High Court Road, Nagpur');
+          setCurrentWard('Dharampeth (Ward 4)');
           const confirmMsg: ChatMessage = {
             id: `msg-loc-${Date.now()}`,
             sender: 'assistant',
-            text: '📍 Address set: 42 Dharampeth Extension, Nagpur. You can now attach a photo or review your report.',
+            text: '📍 Address set: Variety Square, West High Court Road, Nagpur. Pinned to Dharampeth (Ward 4). You can now attach a photo or review your report.',
             timestamp: 'Just now',
             widgetType: 'case_summary',
           };
           setMessages((prev) => [...prev, confirmMsg]);
         },
-        { timeout: 5000 }
+        { timeout: 6000, enableHighAccuracy: true }
       );
     } else {
       setIsLocating(false);
       setCurrentLocation('42 Dharampeth Extension, Nagpur');
     }
+  };
+
+  const handleSelectMapLocation = (loc: NagpurLocation) => {
+    setCurrentLocation(loc.name);
+    setCurrentWard(loc.ward);
+    setMapPickerOpen(false);
+
+    const confirmMsg: ChatMessage = {
+      id: `msg-loc-${Date.now()}`,
+      sender: 'assistant',
+      text: `📍 Confirmed location: ${loc.name} (${loc.ward}). Mapped to ${loc.zone}.`,
+      timestamp: 'Just now',
+      widgetType: 'case_summary',
+    };
+    setMessages((prev) => [...prev, confirmMsg]);
   };
 
   // Handle Photo upload
@@ -237,10 +284,10 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
   const handleProceed = () => {
     const summary = activeClassification
       ? activeClassification.title
-      : 'Garbage has not been collected near your house.';
+      : 'Civic Issue near your locality';
     const dept = activeClassification ? activeClassification.department : 'Solid Waste Management';
     const cat = activeClassification ? activeClassification.category : 'Solid Waste - Collection';
-    const raw = messages.filter((m) => m.sender === 'user').map((m) => m.text).join(' ') || 'Mere area mein garbage pickup nahi hua.';
+    const raw = messages.filter((m) => m.sender === 'user').map((m) => m.text).join(' ') || 'Civic issue report.';
 
     onProceedToReview({
       problemSummary: summary,
@@ -280,13 +327,62 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left Main Prompt Area */}
             <div className="lg:col-span-8 space-y-6">
-              <div className="space-y-2">
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0B1E38] tracking-tight">
-                  What do you need help with?
-                </h1>
-                <p className="text-sm sm:text-base text-slate-600">
-                  Tell us what happened. You don't need to know which department handles it.
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0B1E38] tracking-tight">
+                    What do you need help with?
+                  </h1>
+                  <p className="text-sm sm:text-base text-slate-600">
+                    Tell us what happened. You don't need to know which department handles it.
+                  </p>
+                </div>
+
+                {/* Direct Language Switcher Selector */}
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-xl self-start sm:self-auto shrink-0 shadow-2xs">
+                  <Languages className="w-3.5 h-3.5 text-slate-500 ml-1.5" />
+                  <button
+                    onClick={() => {
+                      setUserSelectedLang('mr');
+                      StorageService.setLanguage('mr');
+                    }}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      userSelectedLang === 'mr'
+                        ? 'bg-[#0B1E38] text-white shadow-xs'
+                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
+                    }`}
+                    id="lang-toggle-mr"
+                  >
+                    मराठी
+                  </button>
+                  <button
+                    onClick={() => {
+                      setUserSelectedLang('hi');
+                      StorageService.setLanguage('hi');
+                    }}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      userSelectedLang === 'hi'
+                        ? 'bg-[#0B1E38] text-white shadow-xs'
+                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
+                    }`}
+                    id="lang-toggle-hi"
+                  >
+                    हिन्दी
+                  </button>
+                  <button
+                    onClick={() => {
+                      setUserSelectedLang('en');
+                      StorageService.setLanguage('en');
+                    }}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      userSelectedLang === 'en'
+                        ? 'bg-[#0B1E38] text-white shadow-xs'
+                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
+                    }`}
+                    id="lang-toggle-en"
+                  >
+                    English
+                  </button>
+                </div>
               </div>
 
               {/* Input Card */}
@@ -300,7 +396,13 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
                       handleSendMessage();
                     }
                   }}
-                  placeholder="Tell NagpurSetu what happened..."
+                  placeholder={
+                    userSelectedLang === 'mr'
+                      ? 'नागपूरसेतू ला सांगा काय झाले आहे... (उदा. माझ्या घराजवळ कचरा साचला आहे किंवा खड्डा पडला आहे)'
+                      : userSelectedLang === 'hi'
+                      ? 'नागपुरसेतु को बताएं क्या समस्या है... (उदा. स्ट्रीट लाइट बंद है या कचरा नहीं उठाया)'
+                      : 'Tell NagpurSetu what happened... (e.g. Garbage accumulation near Dharampeth or road damage)'
+                  }
                   className="w-full h-32 sm:h-36 resize-none text-base text-slate-800 placeholder:text-slate-400 focus:outline-hidden bg-transparent"
                   id="talk-main-textarea"
                 />
@@ -538,50 +640,55 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
 
                       <div className="space-y-3 w-full">
                         {/* Bot Bubble */}
-                        <div className="bg-[#122A4E] text-white rounded-2xl rounded-tl-xs p-4 sm:p-5 text-sm space-y-4 shadow-sm">
-                          <p className="leading-relaxed font-medium">
-                            {msg.text}
-                          </p>
-
-                          {/* Embedded Map Picker Preview in Message */}
-                          <div className="bg-white rounded-xl overflow-hidden text-slate-800 border border-slate-200">
-                            {/* Map Snapshot Visual */}
-                            <div className="relative h-32 w-full bg-slate-100 overflow-hidden flex items-center justify-center">
-                              {/* Simulated clean vector styled map view of Nagpur */}
-                              <svg className="w-full h-full object-cover" viewBox="0 0 400 150">
-                                <rect width="400" height="150" fill="#E8ECEF" />
-                                <path d="M 0,40 Q 150,60 400,20" stroke="#CBD5E1" strokeWidth="12" fill="none" />
-                                <path d="M 50,150 Q 180,90 350,0" stroke="#FDE68A" strokeWidth="8" fill="none" />
-                                <path d="M 200,150 L 220,0" stroke="#93C5FD" strokeWidth="6" fill="none" />
-                                <circle cx="190" cy="75" r="8" fill="#EF4444" stroke="#FFF" strokeWidth="2" />
-                              </svg>
-
-                              <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
-                                <button
-                                  onClick={handleShareLocation}
-                                  disabled={isLocating}
-                                  className="flex items-center gap-2 px-4 py-2 bg-white/95 hover:bg-white text-slate-900 text-xs font-bold rounded-lg shadow-md border border-slate-200 transition-all cursor-pointer"
-                                  id="chat-share-location-button"
-                                >
-                                  <Crosshair className={`w-4 h-4 text-blue-600 ${isLocating ? 'animate-spin' : ''}`} />
-                                  <span>{isLocating ? 'Detecting Location...' : 'Share Current Location'}</span>
-                                </button>
-                              </div>
-                            </div>
-
+                        <div className="bg-[#122A4E] text-white rounded-2xl rounded-tl-xs p-4 sm:p-5 text-sm space-y-4 shadow-sm relative group">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="leading-relaxed font-medium flex-1">
+                              {msg.text}
+                            </p>
                             <button
-                              onClick={() => setMapPickerOpen(true)}
-                              className="w-full p-3 text-left flex items-center justify-between text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100 cursor-pointer"
-                              id="chat-select-on-map-button"
+                              onClick={() => {
+                                SpeechService.speak(msg.text, userSelectedLang);
+                              }}
+                              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition-colors shrink-0 cursor-pointer"
+                              title="Listen to response (बोलून दाखवा / सुनाएं)"
                             >
-                              <div>
-                                <span className="block text-slate-900 font-bold">Select on Map</span>
-                                <span className="text-[11px] text-slate-500 font-normal">
-                                  {currentLocation}
-                                </span>
-                              </div>
-                              <ChevronRight className="w-4 h-4 text-slate-400" />
+                              <Volume2 className="w-4 h-4 text-blue-300" />
                             </button>
+                          </div>
+
+                          {/* Embedded Interactive Map Preview in Message */}
+                          <div className="bg-slate-900 rounded-xl overflow-hidden text-slate-100 border border-slate-700">
+                            <NagpurMapViewer
+                              selectedLocation={currentLocation}
+                              selectedWard={currentWard}
+                              onSelectLocation={(loc) => {
+                                setCurrentLocation(loc.name);
+                                setCurrentWard(loc.ward);
+                              }}
+                              height="h-44"
+                              interactive={true}
+                            />
+
+                            <div className="p-2.5 bg-slate-800/90 flex items-center justify-between gap-2 border-t border-slate-700">
+                              <button
+                                onClick={handleShareLocation}
+                                disabled={isLocating}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
+                                id="chat-share-location-button"
+                              >
+                                <Crosshair className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+                                <span>{isLocating ? 'Fixing GPS...' : 'Use My GPS'}</span>
+                              </button>
+
+                              <button
+                                onClick={() => setMapPickerOpen(true)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                                id="chat-select-on-map-button"
+                              >
+                                <span>Search Spots</span>
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
 
                           {/* Photo Upload Card */}
@@ -625,6 +732,18 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
                   )}
                 </React.Fragment>
               ))}
+
+              {isAiThinking && (
+                <div className="flex items-center gap-3 justify-start max-w-md">
+                  <div className="w-8 h-8 rounded-full bg-[#0B1E38] text-white flex items-center justify-center shrink-0">
+                    <Bot className="w-4 h-4" />
+                  </div>
+                  <div className="bg-[#122A4E] text-slate-200 rounded-2xl rounded-tl-xs px-4 py-2.5 text-xs font-semibold flex items-center gap-2 shadow-xs">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                    <span>NagpurSetu AI analyzing civic report...</span>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 
@@ -675,15 +794,32 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
             )}
 
             {/* Bottom Persistent Input Bar */}
-            <div className="sticky bottom-4 bg-white border border-slate-300 rounded-full px-4 py-2 shadow-md flex items-center gap-3">
+            <div className="sticky bottom-4 bg-white border border-slate-300 rounded-2xl sm:rounded-full px-3 sm:px-4 py-2 shadow-lg flex items-center gap-2 sm:gap-3">
+              {/* Language Switch button in chat bar */}
+              <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                <button
+                  onClick={() => {
+                    const next = userSelectedLang === 'mr' ? 'hi' : userSelectedLang === 'hi' ? 'en' : 'mr';
+                    setUserSelectedLang(next);
+                    StorageService.setLanguage(next);
+                  }}
+                  className="px-2 py-1 text-[11px] font-extrabold text-[#0B1E38] hover:bg-slate-200 rounded transition-colors cursor-pointer flex items-center gap-1"
+                  title="Switch language (मराठी / हिन्दी / English)"
+                >
+                  <Globe className="w-3 h-3 text-blue-700" />
+                  <span>{userSelectedLang === 'mr' ? 'मराठी' : userSelectedLang === 'hi' ? 'हिन्दी' : 'EN'}</span>
+                </button>
+              </div>
+
               <button
                 onClick={toggleListening}
-                className={`p-2 rounded-full transition-colors cursor-pointer ${
-                  isListening ? 'bg-red-500 text-white animate-pulse' : 'text-slate-500 hover:text-slate-800'
+                className={`p-2 rounded-full transition-colors cursor-pointer shrink-0 ${
+                  isListening ? 'bg-red-500 text-white animate-pulse' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
                 }`}
                 id="active-chat-mic-button"
+                title="Speak in selected language"
               >
-                <Mic className="w-5 h-5" />
+                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
               </button>
 
               <input
@@ -696,14 +832,20 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
                     handleSendMessage();
                   }
                 }}
-                placeholder="Type or say it in Hindi/Marathi..."
-                className="w-full text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-hidden bg-transparent"
+                placeholder={
+                  userSelectedLang === 'mr'
+                    ? 'मराठीत बोला किंवा टाईप करा...'
+                    : userSelectedLang === 'hi'
+                    ? 'हिंदी में बोलें या टाइप करें...'
+                    : 'Type or speak in English / Hindi / Marathi...'
+                }
+                className="w-full text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-hidden bg-transparent min-w-0"
                 id="active-chat-input"
               />
 
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="p-2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                className="p-2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer shrink-0"
                 title="Attach photo"
                 id="active-chat-clip-button"
               >
@@ -713,7 +855,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
               <button
                 onClick={() => handleSendMessage()}
                 disabled={!inputText.trim()}
-                className="w-9 h-9 rounded-full bg-[#0B1E38] hover:bg-[#152e52] disabled:opacity-40 text-white flex items-center justify-center transition-all cursor-pointer"
+                className="w-9 h-9 rounded-full bg-[#0B1E38] hover:bg-[#152e52] disabled:opacity-40 text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
                 id="active-chat-send-button"
               >
                 <Send className="w-4 h-4" />
@@ -725,46 +867,62 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
 
       {/* Interactive Map Picker Modal */}
       {mapPickerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl border border-slate-200">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl border border-slate-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-[#0B1E38]">Select Spot in Nagpur</h3>
-              <button onClick={() => setMapPickerOpen(false)} className="p-1 text-slate-400 hover:text-slate-700">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#0B1E38] text-white flex items-center justify-center">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[#0B1E38]">Select Location in Nagpur</h3>
+                  <div className="text-[11px] text-slate-500">Pick any zone or landmark for precise NMC municipal routing</div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setMapPickerOpen(false)} 
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors"
+                id="close-map-picker-modal"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
+            {/* Interactive Map View */}
+            <NagpurMapViewer
+              selectedLocation={currentLocation}
+              selectedWard={currentWard}
+              onSelectLocation={handleSelectMapLocation}
+              height="h-56"
+              interactive={true}
+            />
+
             <div className="space-y-2">
-              <div className="text-xs text-slate-600">
-                Select a recognized locality or landmark in Nagpur:
+              <div className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Recognized NMC Localities & Zones
               </div>
-              <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                {[
-                  { name: '42 Dharampeth Extension, Nagpur', ward: 'Dharampeth (Ward 4)' },
-                  { name: 'Variety Square, West High Court Road', ward: 'Dharampeth (Ward 4)' },
-                  { name: 'Shivaji Hall, 8-Rasta Square, Laxmi Nagar', ward: 'Laxmi Nagar (Ward 7)' },
-                  { name: 'Civil Lines, Near High Court Bench', ward: 'Civil Lines (Ward 1)' },
-                  { name: 'Mangalwari Main Square & Market', ward: 'Mangalwari (Ward 2)' },
-                  { name: 'Congress Nagar T-Point, Dhantoli', ward: 'Dhantoli (Ward 5)' },
-                  { name: 'Gandhi Gate, Mahal Heritage Area', ward: 'Gandhibagh (Ward 6)' },
-                  { name: 'Itwari Central Wholesale Market', ward: 'Itwari (Ward 9)' },
-                ].map((loc) => (
-                  <button
-                    key={loc.name}
-                    onClick={() => {
-                      setCurrentLocation(loc.name);
-                      setCurrentWard(loc.ward);
-                      setMapPickerOpen(false);
-                    }}
-                    className="p-3 text-left border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 rounded-xl text-xs flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="font-semibold text-slate-900">{loc.name}</div>
-                      <div className="text-slate-500 text-[11px]">{loc.ward}</div>
-                    </div>
-                    <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                {NAGPUR_LOCALITIES.map((loc) => {
+                  const isCur = currentLocation.includes(loc.name.split(',')[0]);
+                  return (
+                    <button
+                      key={loc.name}
+                      onClick={() => handleSelectMapLocation(loc)}
+                      className={`p-3 text-left border rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
+                        isCur
+                          ? 'border-blue-500 bg-blue-50/80 font-bold text-blue-900 shadow-2xs'
+                          : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50 text-slate-700'
+                      }`}
+                      id={`loc-select-${loc.name.substring(0, 15).toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+                    >
+                      <div className="min-w-0 pr-2">
+                        <div className="font-semibold text-slate-900 truncate">{loc.name}</div>
+                        <div className="text-slate-500 text-[11px] truncate">{loc.ward} • {loc.zone}</div>
+                      </div>
+                      <MapPin className={`w-4 h-4 shrink-0 ${isCur ? 'text-blue-600' : 'text-slate-400'}`} />
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
