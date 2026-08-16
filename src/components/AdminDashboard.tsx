@@ -69,7 +69,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setCases(updated);
       if (selectedCase) {
         const found = updated.find((c) => c.id.toLowerCase() === selectedCase.id.toLowerCase());
-        if (found) setSelectedCase(found);
+        setSelectedCase(found || null);
       }
     });
     return () => unsub();

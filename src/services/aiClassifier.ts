@@ -53,7 +53,7 @@ export const classifyUserMessageLocal = (text: string, currentLang: string = 'mr
     let reply = 'Here are your recent registered civic cases and their live departmental status:';
     if (detectedLang === 'mr') {
       reply = 'येथे तुमच्या नुकत्याच नोंदवलेल्या तक्रारी आणि त्यांची सद्यस्थिती आहे:';
-    } else if (detectedLang === 'hi' || detectedLang === 'hinglish') {
+    } else if (detectedLang === 'hi') {
       reply = 'आपकी दर्ज की गई शिकायतों का लाइव स्टेटस नीचे देख सकते हैं:';
     }
 

@@ -36,22 +36,21 @@ if (typeof window !== 'undefined') {
   });
 }
 
+// Track whether initial cloud sync has been received
+let isCloudSynced = false;
+
 // Background listener for Cloud Firestore real-time updates
 if (typeof window !== 'undefined') {
   try {
     FirebaseDataService.subscribeToCases((firestoreCases) => {
-      if (firestoreCases && firestoreCases.length > 0) {
-        const local = StorageService.getCases();
-        // Merge without losing unsynced items
-        const mergedMap = new Map<string, CaseItem>();
-        local.forEach((c) => mergedMap.set(c.id, c));
-        firestoreCases.forEach((c) => mergedMap.set(c.id, c));
-        const merged = Array.from(mergedMap.values());
+      // Cloud Firestore is the authoritative source of truth
+      isCloudSynced = true;
+      if (Array.isArray(firestoreCases)) {
         try {
-          localStorage.setItem(STORAGE_KEYS.CASES, JSON.stringify(merged));
+          localStorage.setItem(STORAGE_KEYS.CASES, JSON.stringify(firestoreCases));
           notifyLocalListeners();
         } catch (e) {
-          // ignore
+          console.warn('Storage sync error:', e);
         }
       }
     });
@@ -100,14 +99,15 @@ export const StorageService = {
   getCases: (): CaseItem[] => {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.CASES);
-      if (!data) {
-        localStorage.setItem(STORAGE_KEYS.CASES, JSON.stringify(INITIAL_CASES));
-        return INITIAL_CASES;
+      if (data !== null) {
+        return JSON.parse(data);
       }
-      return JSON.parse(data);
+      // First boot before cloud sync
+      localStorage.setItem(STORAGE_KEYS.CASES, JSON.stringify(INITIAL_CASES));
+      return INITIAL_CASES;
     } catch (e) {
       console.error('Error loading cases:', e);
-      return INITIAL_CASES;
+      return [];
     }
   },
 
@@ -122,6 +122,35 @@ export const StorageService = {
       notifyListeners();
     } catch (e) {
       console.error('Error saving cases:', e);
+    }
+  },
+
+  deleteCase: (id: string): void => {
+    const cases = StorageService.getCases();
+    const updated = cases.filter((c) => c.id.toLowerCase() !== id.toLowerCase());
+    StorageService.saveCases(updated);
+
+    // Delete in Cloud Firestore immediately
+    FirebaseDataService.deleteCase(id).catch((err) => {
+      console.warn('Firestore delete warning:', err);
+    });
+  },
+
+  clearAllCases: async (): Promise<void> => {
+    StorageService.saveCases([]);
+    try {
+      await FirebaseDataService.clearAllCases();
+    } catch (err) {
+      console.warn('Firestore clear error:', err);
+    }
+  },
+
+  seedDemoCases: async (): Promise<void> => {
+    StorageService.saveCases(INITIAL_CASES);
+    try {
+      await FirebaseDataService.seedCases(INITIAL_CASES);
+    } catch (err) {
+      console.warn('Firestore seed error:', err);
     }
   },
 
@@ -361,5 +390,6 @@ export const StorageService = {
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(INITIAL_NOTIFICATIONS));
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(INITIAL_USER));
     notifyListeners();
+    FirebaseDataService.seedCases(INITIAL_CASES).catch((e) => console.warn('Reset seed warning:', e));
   }
 };

@@ -270,7 +270,7 @@ export const CaseDetailModal: React.FC<CaseDetailModalProps> = ({
         <div className="pt-3 border-t border-slate-200 flex justify-end">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 bg-[#0B1E38] hover:bg-[#152e52] text-white text-xs font-bold rounded-lg shadow-xs"
+            className="px-5 py-2.5 bg-[#0B1E38] hover:bg-[#152e52] text-white text-xs font-bold rounded-lg shadow-xs cursor-pointer"
           >
             Close Details
           </button>
