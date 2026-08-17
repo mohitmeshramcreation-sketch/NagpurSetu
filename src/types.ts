@@ -4,7 +4,9 @@ export type UserRole = 'citizen' | 'officer' | 'admin';
 
 export type CaseStatus = 
   | 'Submitted' 
+  | 'Received'
   | 'Assigned' 
+  | 'Under Review'
   | 'In Progress' 
   | 'Waiting for Citizen' 
   | 'Resolved' 
@@ -25,6 +27,20 @@ export type Department =
   | 'Public Health & Sanitation' 
   | 'Enforcement & Hoardings' 
   | 'Town Planning & Birth/Death';
+
+export type ComplaintCategory =
+  | 'Road Problems'
+  | 'Streetlight Problems'
+  | 'Waste Management'
+  | 'Drainage Problems'
+  | 'Water Problems'
+  | 'Property Tax Problems'
+  | 'Building Permission Problems'
+  | 'Trade License Problems'
+  | 'Birth Certificate Problems'
+  | 'Death Certificate Problems'
+  | 'Water Connection Problems'
+  | 'Other Municipal Problems';
 
 export interface TimelineEvent {
   id: string;
@@ -72,12 +88,15 @@ export interface CaseItem {
   timeline: TimelineEvent[];
   communityIssueId?: string;
   duplicateCount?: number;
+  confirmationsCount?: number;
+  confirmedBySessions?: string[];
   resolutionNotes?: string;
   resolutionEvidenceUrl?: string;
   citizenFeedback?: {
     isResolved: boolean;
     feedbackText?: string;
     submittedAt?: string;
+    reopenReason?: string;
   };
   language?: Language;
   rawUserInput?: string;
@@ -89,13 +108,15 @@ export interface ChatMessage {
   text: string;
   timestamp: string;
   language?: Language;
-  widgetType?: 'location_picker' | 'photo_upload' | 'case_summary' | 'duplicate_warning' | 'categories';
+  widgetType?: 'location_picker' | 'photo_upload' | 'case_summary' | 'duplicate_warning' | 'categories' | 'scheme_card' | 'certificate_card';
   meta?: {
     caseId?: string;
     extractedCategory?: string;
     extractedLocation?: string;
     photoUrl?: string;
     possibleDuplicateId?: string;
+    schemeId?: string;
+    certificateId?: string;
   };
 }
 
@@ -117,6 +138,9 @@ export interface HotspotCluster {
   ward: string;
   category: string;
   count: number;
+  confirmations: number;
+  activeCount: number;
+  resolvedCount: number;
   lat: number;
   lng: number;
   severity: 'low' | 'moderate' | 'high';
@@ -163,4 +187,76 @@ export interface MunicipalService {
   slaDays: number;
   requiredDocuments: string[];
   icon: string;
+  category: 'tax' | 'water' | 'certificate' | 'license' | 'waste' | 'planning' | 'roads' | 'general';
+  onlinePortalUrl?: string;
+  authorityName?: string;
 }
+
+export type SchemeCategory = 
+  | 'Housing & Urban Living'
+  | 'Financial Assistance & Livelihood'
+  | 'Health, Nutrition & Sanitation'
+  | 'Energy & Utilities';
+
+export type BeneficiaryGroup = 
+  | 'Farmers'
+  | 'Students'
+  | 'Women'
+  | 'Senior Citizens'
+  | 'Job Seekers'
+  | 'Entrepreneurs'
+  | 'Persons with Disabilities'
+  | 'General Citizens';
+
+export interface GovernmentScheme {
+  id: string;
+  name: string;
+  marathiName?: string;
+  hindiName?: string;
+  category: SchemeCategory;
+  beneficiaries: BeneficiaryGroup[];
+  purpose: string;
+  benefits: string;
+  eligibility: string[];
+  requiredDocuments: string[];
+  requiredCertificates: string[];
+  applicationProcedure: string;
+  officialAuthority: string;
+  officialLink: string;
+  lastVerifiedDate: string;
+  isNagpurSpecific?: boolean;
+  subsidyAmount?: string;
+}
+
+export interface CitizenCertificate {
+  id: string;
+  name: string;
+  marathiName?: string;
+  hindiName?: string;
+  purpose: string;
+  issuingAuthority: string;
+  department: string;
+  eligibility: string[];
+  requiredDocuments: string[];
+  processType: 'Online via Aaple Sarkar' | 'Online & Offline (Setu Seva Kendra)' | 'NMC Ward Office';
+  applicationSteps: string[];
+  officialSource: string;
+  officialLink: string;
+  processingTimeDays: number;
+  governmentFee: number;
+  lastVerifiedDate: string;
+  connectedSchemes: string[]; // scheme IDs or names that require this
+}
+
+export interface WardAreaStats {
+  ward: string;
+  zone: string;
+  area: string;
+  totalProblems: number;
+  activeProblems: number;
+  resolvedProblems: number;
+  confirmations: number;
+  topCategory: string;
+  categoryBreakdown: { [category: string]: number };
+}
+

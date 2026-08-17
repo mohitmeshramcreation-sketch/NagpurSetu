@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Mic, 
   User, 
@@ -8,8 +8,21 @@ import {
   TrendingUp, 
   MessageSquareText, 
   FileText,
-  Volume2
+  Volume2,
+  Camera,
+  MapPin,
+  Lightbulb,
+  Waves,
+  Construction,
+  Trash2,
+  Droplets,
+  Award,
+  ChevronRight,
+  ShieldAlert,
+  Flame
 } from 'lucide-react';
+import { PROBLEM_DOMAINS } from '../data/problemDomains';
+import { SpecializedProblemAIModal } from './SpecializedProblemAIModal';
 
 interface HomeScreenProps {
   navigate: (route: string) => void;
@@ -20,175 +33,302 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   navigate,
   onExploreServices,
 }) => {
+  const [specializedModalOpen, setSpecializedModalOpen] = useState(false);
+  const [modalDomainKey, setModalDomainKey] = useState<string>('street_lights');
+
+  const handleLaunchDomainAI = (domainKey: string) => {
+    setModalDomainKey(domainKey);
+    setSpecializedModalOpen(true);
+  };
+
   return (
     <div className="w-full bg-[#FAFCFF] min-h-[calc(100vh-140px)] flex flex-col justify-between" id="home-screen-container">
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-16 pb-12 w-full">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-14 pb-10 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           {/* Left Column Text & CTAs */}
           <div className="lg:col-span-6 space-y-6">
             <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600 text-white text-xs font-black uppercase tracking-wider animate-pulse shadow-sm">
+                <Camera className="w-3.5 h-3.5" />
+                <span>Snapchat-Style Live Photo Hotspot Map</span>
+              </div>
+
               <h1 className="text-4xl sm:text-5xl lg:text-5xl font-extrabold text-[#0B1E38] tracking-tight leading-[1.15]">
                 Your City. Your Problem. <br />
-                <span className="text-[#0B1E38]">One Conversation.</span>
+                <span className="text-[#0B1E38]">One Dedicated AI Per Objective.</span>
               </h1>
               <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl">
-                Tell NagpurSetu what is wrong or what service you need—in Marathi, Hindi or English. You don't need to know which department to contact.
+                Real-time problem-solving AI specialized for Street Lights, Floods & Drainage, Potholes, Waste Management, Water Supply, and Certificates.
               </p>
             </div>
 
             {/* Action buttons */}
-            <div className="flex flex-wrap items-center gap-4 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
-                onClick={() => navigate('/talk')}
-                className="flex items-center gap-2.5 px-6 py-3.5 bg-[#EA580C] hover:bg-[#D94E07] text-white text-base font-semibold rounded-md shadow-xs transition-all active:scale-[0.98] cursor-pointer"
-                id="hero-talk-to-nagpursetu-button"
+                onClick={() => navigate('/hotspots')}
+                className="flex items-center gap-2 px-5 py-3.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-md transition-all active:scale-[0.98] cursor-pointer"
+                id="hero-snap-map-button"
               >
-                <Mic className="w-5 h-5 text-white" />
-                <span>Talk to NagpurSetu</span>
+                <Flame className="w-4 h-4 text-amber-300" />
+                <span>Open Snapchat Photo Map</span>
               </button>
 
               <button
-                onClick={() => onExploreServices ? onExploreServices() : navigate('/services')}
-                className="px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-800 text-base font-semibold rounded-md border border-slate-300 shadow-2xs transition-all cursor-pointer"
-                id="hero-explore-services-button"
+                onClick={() => navigate('/talk')}
+                className="flex items-center gap-2 px-5 py-3.5 bg-[#EA580C] hover:bg-[#D94E07] text-white text-sm font-bold rounded-xl shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                id="hero-talk-to-nagpursetu-button"
               >
-                Explore Services
+                <Mic className="w-4 h-4 text-white" />
+                <span>Talk / Voice AI</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/complaints')}
+                className="px-5 py-3.5 bg-[#0B1E38] hover:bg-[#152e52] text-white text-sm font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                id="hero-report-complaint-button"
+              >
+                Report Grievance
               </button>
             </div>
           </div>
 
-          {/* Right Column: Stitch Conversation Visual Card */}
+          {/* Right Column: Interactive Quick Objective Solver Launcher */}
           <div className="lg:col-span-6">
-            <div className="bg-[#EEF3F8] border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-4 shadow-xs relative overflow-hidden">
-              {/* User Bubble 1 */}
-              <div className="flex items-start gap-3 justify-start max-w-md">
-                <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center shrink-0">
-                  <User className="w-4 h-4" />
+            <div className="bg-gradient-to-br from-[#0B1E38] to-[#1E3A8A] border border-slate-700 rounded-3xl p-6 sm:p-7 space-y-4 shadow-xl text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
+                  <h3 className="text-base sm:text-lg font-extrabold text-white">
+                    Specialized Problem-Solving AI Solvers
+                  </h3>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 font-medium shadow-2xs">
-                  Mere area mein garbage nahi uthaya.
-                </div>
+                <span className="px-2 py-0.5 rounded-md bg-white/10 text-amber-300 text-[10px] font-mono font-bold">
+                  8 Real-Time Models
+                </span>
+              </div>
+              <p className="text-xs text-blue-100">
+                Select your specific civic problem to open a dedicated AI tuned strictly for that objective with live diagnostics:
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                {[
+                  { key: 'street_lights', label: 'Street Lights', icon: Lightbulb, color: 'text-amber-300' },
+                  { key: 'flood_drainage', label: 'Flood & Drains', icon: Waves, color: 'text-cyan-300' },
+                  { key: 'potholes_roads', label: 'Potholes & Roads', icon: Construction, color: 'text-orange-300' },
+                  { key: 'garbage_waste', label: 'Garbage & Waste', icon: Trash2, color: 'text-emerald-300' },
+                  { key: 'water_supply', label: 'Water Leakages', icon: Droplets, color: 'text-blue-300' },
+                  { key: 'certificates', label: 'Certificates', icon: Award, color: 'text-purple-300' },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => handleLaunchDomainAI(item.key)}
+                      className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-left transition-all hover:scale-102 flex flex-col justify-between group cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between">
+                        <Icon className={`w-5 h-5 ${item.color}`} />
+                        <ChevronRight className="w-3.5 h-3.5 text-white/50 group-hover:text-white" />
+                      </div>
+                      <div className="mt-2 text-xs font-bold text-white group-hover:text-amber-200">
+                        {item.label} AI
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Bot Response Bubble (Light Blue) */}
-              <div className="flex items-start justify-end pl-8 sm:pl-12">
-                <div className="bg-[#D3E3FD] border border-blue-200/60 rounded-xl p-4 sm:p-5 text-slate-900 max-w-md space-y-2 shadow-2xs">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm font-medium leading-snug">
-                      Understood. I have logged a Solid Waste Management case for your location.
-                    </p>
-                    <div className="w-8 h-8 rounded-lg bg-[#0B1E38] text-white flex items-center justify-center shrink-0">
-                      <Archive className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div className="text-xs text-slate-600 font-mono">
-                    Case #1024 created
-                  </div>
-                </div>
+              <div className="pt-2 flex items-center justify-between text-[11px] text-blue-200 border-t border-white/10">
+                <span>⚡ Real-time work order generation</span>
+                <span className="font-bold text-amber-300">Marathi, Hindi & English</span>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-              {/* User Bubble 2 */}
-              <div className="flex items-start gap-3 justify-start max-w-md pt-1">
-                <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center shrink-0">
-                  <User className="w-4 h-4" />
-                </div>
-                <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 font-medium shadow-2xs font-['Noto_Sans_Devanagari']">
-                  माझ्या रस्त्यावर मोठा खड्डा आहे.
-                </div>
+      {/* 4 Core Citizen Portal Sections */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full border-t border-slate-200/80">
+        <div className="text-center space-y-1.5 mb-8">
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-900 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 inline-block">
+            NMC Citizen Assistance Hub
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0B1E38]">
+            Four Core Pillars of NagpurSetu
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto">
+            Directly connect with municipal services, welfare schemes, official certificates, and neighborhood grievance resolution.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Pillar 1: Solutions */}
+          <div
+            onClick={() => navigate('/services')}
+            className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+            id="portal-card-solutions"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-800 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-blue-700" />
               </div>
+              <div>
+                <h3 className="text-base font-bold text-[#0B1E38] group-hover:text-blue-900 transition-colors">
+                  1. Solutions Finder
+                </h3>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  Find the exact government or municipal service using assisted conversational AI.
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-blue-900">
+              <span>Explore Solutions</span>
+              <span>→</span>
+            </div>
+          </div>
+
+          {/* Pillar 2: Schemes */}
+          <div
+            onClick={() => navigate('/schemes')}
+            className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+            id="portal-card-schemes"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center">
+                <ClipboardCheck className="w-6 h-6 text-amber-700" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#0B1E38] group-hover:text-amber-900 transition-colors">
+                  2. Government Schemes
+                </h3>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  PMAY housing, PM Surya Ghar solar, MJPJAY health insurance, and SVANidhi subsidies.
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-amber-900">
+              <span>View Verified Schemes</span>
+              <span>→</span>
+            </div>
+          </div>
+
+          {/* Pillar 3: Certificates */}
+          <div
+            onClick={() => navigate('/certificates')}
+            className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+            id="portal-card-certificates"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center">
+                <FileText className="w-6 h-6 text-emerald-700" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#0B1E38] group-hover:text-emerald-900 transition-colors">
+                  3. Certificates Guide
+                </h3>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  Income, Domicile, Caste, Non-Creamy Layer, Birth & Death certificates and proofs.
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-emerald-900">
+              <span>Check Required Documents</span>
+              <span>→</span>
+            </div>
+          </div>
+
+          {/* Pillar 4: Complaints & Hotspot Map */}
+          <div
+            onClick={() => navigate('/hotspots')}
+            className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 hover:border-rose-400 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+            id="portal-card-complaints"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center">
+                <Flame className="w-6 h-6 text-rose-700" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#0B1E38] group-hover:text-rose-900 transition-colors">
+                  4. Snapchat Photo Map
+                </h3>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  Live geotagged photo bubbles across Nagpur with single-objective problem filters.
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-rose-900">
+              <span>Explore Photo Map</span>
+              <span>→</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* How It Works Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 w-full">
-        <div className="text-center space-y-2 mb-10 sm:mb-12">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+        <div className="text-center space-y-2 mb-8">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0B1E38]">
             How It Works
           </h2>
           <p className="text-sm sm:text-base text-slate-600">
-            From a simple sentence to swift civic action.
+            From an objective-focused AI diagnostic to real-time ground squad action.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Card 1 */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 hover:border-slate-300 transition-shadow hover:shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center">
-              <Volume2 className="w-5 h-5" />
+          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-3 hover:border-slate-300 transition-shadow">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center font-bold">
+              1
             </div>
-            <div className="space-y-1.5">
-              <h3 className="text-base font-bold text-slate-900">1. Tell Us</h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Speak or type your issue in your preferred language.
-              </p>
-            </div>
+            <h3 className="text-base font-bold text-slate-900">Pick Your Objective</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Select Streetlight, Flood, Pothole, Water, or Waste to launch that specific domain AI.
+            </p>
           </div>
 
-          {/* Card 2 */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 hover:border-slate-300 transition-shadow hover:shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-blue-600" />
+          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-3 hover:border-slate-300 transition-shadow">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center font-bold">
+              2
             </div>
-            <div className="space-y-1.5">
-              <h3 className="text-base font-bold text-slate-900">2. We Understand</h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Our AI categorizes the problem and identifies the right department automatically.
-              </p>
-            </div>
+            <h3 className="text-base font-bold text-slate-900">Live AI Diagnostics</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Dedicated model analyzes severity, required equipment, safety alerts, and SLA in real time.
+            </p>
           </div>
 
-          {/* Card 3 */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 hover:border-slate-300 transition-shadow hover:shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center">
-              <ClipboardCheck className="w-5 h-5 text-amber-600" />
+          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-3 hover:border-slate-300 transition-shadow">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center font-bold">
+              3
             </div>
-            <div className="space-y-1.5">
-              <h3 className="text-base font-bold text-slate-900">3. Team Assigned</h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                A case is created and immediately routed to the local civic officer.
-              </p>
-            </div>
+            <h3 className="text-base font-bold text-slate-900">Snap Photo Corroboration</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Confirm spot on Snapchat-style city map to elevate priority for NMC control room.
+            </p>
           </div>
 
-          {/* Card 4 */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 hover:border-slate-300 transition-shadow hover:shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
+          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-3 hover:border-slate-300 transition-shadow">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center font-bold">
+              4
             </div>
-            <div className="space-y-1.5">
-              <h3 className="text-base font-bold text-slate-900">4. Tracked</h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                You receive a tracking link to follow progress until resolution.
-              </p>
-            </div>
+            <h3 className="text-base font-bold text-slate-900">Rapid Squad Dispatch</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Hydraulic ladders, Jetpatchers, or dewatering pumps dispatched to your exact coordinates.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Ready to connect banner */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 w-full">
-        <div className="bg-[#122A4E] rounded-2xl p-8 sm:p-12 text-center text-white space-y-5 shadow-md">
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Ready to connect with your city?
-          </h2>
-          <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto leading-relaxed">
-            Report an issue or request a service in seconds without navigating complex department menus.
-          </p>
-          <div className="pt-2">
-            <button
-              onClick={() => navigate('/talk')}
-              className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-[#EA580C] hover:bg-[#D94E07] text-white text-base font-semibold rounded-md shadow-xs transition-all active:scale-[0.98] cursor-pointer"
-              id="cta-start-conversation-button"
-            >
-              <MessageSquareText className="w-5 h-5 text-white" />
-              <span>Start Conversation</span>
-            </button>
-          </div>
-        </div>
-      </section>
+      {/* Specialized Problem Solving AI Modal */}
+      {specializedModalOpen && (
+        <SpecializedProblemAIModal
+          initialDomainKey={modalDomainKey}
+          initialLocation="Sitabuldi, Nagpur"
+          initialWard="Dharampeth (Ward 2)"
+          onClose={() => setSpecializedModalOpen(false)}
+          navigate={navigate}
+        />
+      )}
     </div>
   );
 };

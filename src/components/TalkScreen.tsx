@@ -451,44 +451,66 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
 
               {/* Try Saying Section */}
               <div className="space-y-3 pt-2">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  TRY SAYING...
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                  <span>बोलून किंवा टाईप करून सांगा (TRY SAYING...)</span>
+                  <span className="text-[11px] font-normal text-blue-900">मराठी • हिन्दी • English</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     onClick={() =>
-                      handleTrySaying(
-                        "There's a massive pothole near Variety Square causing traffic."
-                      )
+                      handleTrySaying("माझ्या घराजवळ कचरा साचला आहे, त्वरित गाडी पाठवा...")
                     }
-                    className="p-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-left text-xs sm:text-sm text-slate-700 hover:text-slate-900 transition-all shadow-2xs group flex items-start gap-2.5 cursor-pointer"
-                    id="prompt-pothole"
-                  >
-                    <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                    <span>"There's a massive pothole near Variety Square causing traffic."</span>
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      handleTrySaying("माझ्या घराजवळ कचरा उचलला गेला नाही...")
-                    }
-                    className="p-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-left text-xs sm:text-sm text-slate-700 hover:text-slate-900 transition-all shadow-2xs group flex items-start gap-2.5 font-['Noto_Sans_Devanagari'] cursor-pointer"
+                    className="p-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-left text-xs sm:text-sm text-slate-800 hover:text-slate-900 transition-all shadow-2xs group flex items-start gap-2.5 font-['Noto_Sans_Devanagari'] cursor-pointer"
                     id="prompt-garbage-marathi"
                   >
-                    <Sparkles className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                    <span>"माझ्या घराजवळ कचरा उचलला गेला नाही..."</span>
+                    <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-slate-900">"माझ्या घराजवळ कचरा साचला आहे..."</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">कचरा संकलन व स्वच्छता (मराठी)</div>
+                    </div>
                   </button>
 
                   <button
                     onClick={() =>
-                      handleTrySaying("स्ट्रीट लाइट तीन दिन से बंद है...")
+                      handleTrySaying("रस्त्यावर मोठा खड्डा आहे, वाहने घसरून अपघात होत आहेत...")
                     }
-                    className="p-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-left text-xs sm:text-sm text-slate-700 hover:text-slate-900 transition-all shadow-2xs group flex items-start gap-2.5 font-['Noto_Sans_Devanagari'] cursor-pointer"
-                    id="prompt-streetlight-hindi"
+                    className="p-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-left text-xs sm:text-sm text-slate-800 hover:text-slate-900 transition-all shadow-2xs group flex items-start gap-2.5 font-['Noto_Sans_Devanagari'] cursor-pointer"
+                    id="prompt-pothole-marathi"
                   >
                     <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                    <span>"स्ट्रीट लाइट तीन दिन से बंद है..."</span>
+                    <div>
+                      <div className="font-bold text-slate-900">"रस्त्यावर मोठा खड्डा आहे, अपघात होत आहेत..."</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">रस्ते व खड्डे दुरुस्ती (मराठी)</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      handleTrySaying("स्ट्रीट लाइट तीन दिन से बंद है, इलाके में अंधेरा है...")
+                    }
+                    className="p-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-left text-xs sm:text-sm text-slate-800 hover:text-slate-900 transition-all shadow-2xs group flex items-start gap-2.5 font-['Noto_Sans_Devanagari'] cursor-pointer"
+                    id="prompt-streetlight-hindi"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-slate-900">"स्ट्रीट लाइट तीन दिन से बंद है..."</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">विद्युत व पथदिवे (हिंदी)</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      handleTrySaying("पानी की सप्लाई बहुत कम प्रेशर से आ रही है...")
+                    }
+                    className="p-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-left text-xs sm:text-sm text-slate-800 hover:text-slate-900 transition-all shadow-2xs group flex items-start gap-2.5 font-['Noto_Sans_Devanagari'] cursor-pointer"
+                    id="prompt-water-hindi"
+                  >
+                    <Sparkles className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-slate-900">"पानी की सप्लाई बहुत कम प्रेशर से आ रही है..."</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">जलप्रदाय व पाईपलाईन (हिंदी)</div>
+                    </div>
                   </button>
                 </div>
               </div>
@@ -499,20 +521,26 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
                   onClick={() => {
                     setHasStartedConversation(true);
                     setHelpMeModeActive(true);
+                    const welcomeText = userSelectedLang === 'mr'
+                      ? 'नमस्कार! नागपूरसेतू नागरिक सहाय्यक सेवेत आपले स्वागत आहे. आपण मराठी, हिंदी किंवा इंग्रजीत बोलू शकता. खालीलपैकी समस्येचा प्रकार निवडा किंवा आपली समस्या सांगा.'
+                      : userSelectedLang === 'hi'
+                      ? 'नमस्ते! नागपुरसेतु नागरिक सहायता में आपका स्वागत है। आप हिंदी, मराठी या अंग्रेजी में बोल सकते हैं। नीचे दी गई श्रेणी चुनें या अपनी समस्या बताएं।'
+                      : 'Namaskar! NagpurSetu Voice & Civic Assistant is ready. You can speak in Marathi, Hindi, or English.';
                     setMessages([
                       {
                         id: 'welcome-guide',
                         sender: 'assistant',
-                        text: 'Namaskar! NagpurSetu Help Mode is active. You can speak in Hindi, Marathi or English, or tap one of the common categories below.',
+                        text: welcomeText,
                         timestamp: 'Just now',
                       },
                     ]);
+                    SpeechService.speak(welcomeText, userSelectedLang);
                   }}
                   className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 rounded-md text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs transition-colors cursor-pointer"
                   id="help-me-guide-button"
                 >
                   <HelpCircle className="w-4 h-4 text-slate-700" />
-                  <span>Help Me Guide</span>
+                  <span>मदत व मार्गदर्शन (Help Me Guide)</span>
                 </button>
               </div>
             </div>
@@ -665,7 +693,10 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
                                 setCurrentLocation(loc.name);
                                 setCurrentWard(loc.ward);
                               }}
-                              height="h-44"
+                              onConfirmSpot={(loc) => {
+                                handleSelectMapLocation(loc);
+                              }}
+                              height="h-48"
                               interactive={true}
                             />
 
@@ -685,7 +716,7 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
                                 className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                                 id="chat-select-on-map-button"
                               >
-                                <span>Search Spots</span>
+                                <span>More Zones & Map</span>
                                 <ChevronRight className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -892,7 +923,11 @@ export const TalkScreen: React.FC<TalkScreenProps> = ({
             <NagpurMapViewer
               selectedLocation={currentLocation}
               selectedWard={currentWard}
-              onSelectLocation={handleSelectMapLocation}
+              onSelectLocation={(loc) => {
+                setCurrentLocation(loc.name);
+                setCurrentWard(loc.ward);
+              }}
+              onConfirmSpot={handleSelectMapLocation}
               height="h-56"
               interactive={true}
             />

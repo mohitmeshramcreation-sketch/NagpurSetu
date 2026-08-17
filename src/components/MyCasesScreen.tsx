@@ -217,12 +217,27 @@ export const MyCasesScreen: React.FC<MyCasesScreenProps> = ({
           ))}
 
           {filtered.length === 0 && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-3">
+            <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center space-y-4 shadow-xs">
               <FileText className="w-10 h-10 mx-auto text-slate-300" />
-              <div className="text-sm font-bold text-slate-700">No matching cases found</div>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Try searching for another keyword or report a new problem.
-              </p>
+              <div className="space-y-1">
+                <div className="text-base font-bold text-slate-800">
+                  {cases.length === 0 ? 'No Complaints Logged Yet' : 'No matching cases found'}
+                </div>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                  {cases.length === 0
+                    ? 'When you report a municipal grievance or request civic assistance, your case timeline and officer status will appear here.'
+                    : 'Try searching for another keyword or adjust the status filter.'}
+                </p>
+              </div>
+              <div className="pt-2">
+                <button
+                  onClick={() => navigate('/complaints')}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0B1E38] text-white text-xs font-bold rounded-xl hover:bg-[#152e52] transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Report an Issue</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -6,73 +6,39 @@ import {
   MapPin, 
   Globe, 
   Eye, 
-  Volume2, 
-  Shield, 
   Check, 
   Save, 
   RotateCcw,
-  Sparkles,
-  LogOut,
-  LogIn,
-  KeyRound
+  Sparkles
 } from 'lucide-react';
 import { StorageService } from '../services/storage';
-import { FirebaseDataService } from '../services/firebaseDataService';
-import { Language, UserProfile, UserRole } from '../types';
-import { User as FirebaseUser } from 'firebase/auth';
+import { Language, UserProfile } from '../types';
 
 interface ProfileScreenProps {
   navigate: (route: string) => void;
-  activeRole: UserRole;
-  onRoleChange: (role: UserRole) => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   navigate,
-  activeRole,
-  onRoleChange,
 }) => {
   const [profile, setProfile] = useState<UserProfile>(StorageService.getUser());
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
 
   useEffect(() => {
     setProfile(StorageService.getUser());
-    const unsub = FirebaseDataService.onAuthChange((user) => {
-      setAuthUser(user);
-      if (user && user.uid) {
-        FirebaseDataService.getUserProfile(user.uid).then((p) => {
-          if (p) setProfile(p);
-        }).catch(() => {});
-      }
-    });
-    return () => unsub();
-  }, [activeRole]);
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     StorageService.saveUser(profile);
-    
-    // Save to Firestore if authenticated
-    if (authUser?.uid) {
-      await FirebaseDataService.saveUserProfile(authUser.uid, profile).catch((err) => {
-        console.warn('Firestore profile sync error:', err);
-      });
-    }
-
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
   };
 
-  const handleSignOut = async () => {
-    await FirebaseDataService.signOutUser();
-    window.location.reload();
-  };
-
   const handleResetDemoData = () => {
-    if (confirm('Reset all demo complaints and cases back to initial sample state?')) {
+    if (confirm('Clear all local complaint history and saved citizen preferences?')) {
       StorageService.resetDemoData();
-      alert('Demo data has been restored to default state.');
+      alert('Local data has been cleared.');
       window.location.reload();
     }
   };
@@ -85,49 +51,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B1E38] tracking-tight">
-              Profile & Preferences
+              Profile & Citizen Preferences
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1">
-              Manage your contact information, language, and accessibility preferences.
+              Manage your local contact details, municipal ward, default language, and accessibility settings.
             </p>
           </div>
-        </div>
-
-        {/* Account Authentication Banner */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-[#EA580C]">
-              <KeyRound className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs text-slate-500 font-medium">NagpurSetu Account Status</div>
-              <div className="text-sm font-bold text-slate-900">
-                {authUser ? (
-                  <span className="text-emerald-700 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    Authenticated ({authUser.email || authUser.displayName})
-                  </span>
-                ) : (
-                  <span className="text-slate-700">Guest / Unauthenticated Session</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {authUser ? (
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
-            </button>
-          ) : (
-            <div className="text-xs text-slate-500">
-              Use <span className="font-bold text-[#EA580C]">Log In</span> or <span className="font-bold text-[#EA580C]">Sign Up</span> in the top header to connect your profile.
-            </div>
-          )}
         </div>
 
         {saveSuccess && (

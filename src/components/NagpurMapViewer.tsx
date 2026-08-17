@@ -1,5 +1,17 @@
-import React, { useState } from 'react';
-import { MapPin, Navigation, Search, Check, Layers, Compass, Crosshair } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import L from 'leaflet';
+import { 
+  MapPin, 
+  Search, 
+  Check, 
+  ZoomIn, 
+  ZoomOut, 
+  Layers, 
+  LocateFixed,
+  RotateCcw,
+  CheckCircle2,
+  Sparkles
+} from 'lucide-react';
 
 export interface NagpurLocation {
   name: string;
@@ -11,24 +23,78 @@ export interface NagpurLocation {
 }
 
 export const NAGPUR_LOCALITIES: NagpurLocation[] = [
-  { name: '42 Dharampeth Extension, Nagpur', landmark: 'Near Coffee House, West High Court Rd', ward: 'Dharampeth (Ward 4)', zone: 'Zone 2 (Dharampeth)', lat: 21.1438, lng: 79.0645 },
-  { name: 'Variety Square, Sitabuldi', landmark: 'Maharajbagh Rd / Central Junction', ward: 'Dharampeth (Ward 4)', zone: 'Zone 2 (Dharampeth)', lat: 21.1466, lng: 79.0806 },
-  { name: 'Shivaji Hall, 8-Rasta Square, Laxmi Nagar', landmark: 'Opposite VNIT gate road', ward: 'Laxmi Nagar (Ward 1)', zone: 'Zone 1 (Laxmi Nagar)', lat: 21.1219, lng: 79.0669 },
-  { name: 'Civil Lines, Near High Court Bench', landmark: 'Palm Road / Judicial Enclave', ward: 'Civil Lines (Ward 1)', zone: 'Zone 2 (Dharampeth)', lat: 21.1578, lng: 79.0734 },
-  { name: 'Mangalwari Main Square & Market', landmark: 'Sadar Bazar connecting link', ward: 'Mangalwari (Ward 10)', zone: 'Zone 10 (Mangalwari)', lat: 21.1712, lng: 79.0834 },
-  { name: 'Congress Nagar T-Point, Dhantoli', landmark: 'Near Rahate Colony Metro Station', ward: 'Dhantoli (Ward 4)', zone: 'Zone 4 (Dhantoli)', lat: 21.1287, lng: 79.0851 },
-  { name: 'Gandhi Gate, Mahal Heritage Precinct', landmark: 'Old City Center / Tilak Statue', ward: 'Gandhibagh (Ward 6)', zone: 'Zone 6 (Gandhibagh)', lat: 21.1441, lng: 79.1098 },
-  { name: 'Itwari Wholesale Cloth Market', landmark: 'Near Shahid Chowk / Central Avenue', ward: 'Sataranjipura (Ward 7)', zone: 'Zone 7 (Sataranjipura)', lat: 21.1542, lng: 79.1165 },
-  { name: 'Manish Nagar Main T-Point', landmark: 'Railway Underbridge / Somalwada', ward: 'Laxmi Nagar (Ward 1)', zone: 'Zone 1 (Laxmi Nagar)', lat: 21.0963, lng: 79.0772 },
-  { name: 'Medical Square, Hanuman Nagar', landmark: 'GMC Hospital Front Gate', ward: 'Hanuman Nagar (Ward 3)', zone: 'Zone 3 (Hanuman Nagar)', lat: 21.1345, lng: 79.0961 },
-  { name: 'Nandanvan Main Road & Water Tank', landmark: 'Near KDK College Square', ward: 'Nehru Nagar (Ward 5)', zone: 'Zone 5 (Nehru Nagar)', lat: 21.1365, lng: 79.1302 },
-  { name: 'Kalamna Market Yard, Lakadganj', landmark: 'Central Agriculture Produce Hub', ward: 'Lakadganj (Ward 8)', zone: 'Zone 8 (Lakadganj)', lat: 21.1685, lng: 79.1458 },
+  { name: 'Dharampeth, West High Court Road', landmark: 'Near Coffee House / Traffic Park', ward: 'Dharampeth (Ward 2)', zone: 'Zone 2 (Dharampeth)', lat: 21.1438, lng: 79.0645 },
+  { name: 'Sitabuldi & Variety Square', landmark: 'Maharajbagh Rd / Central Interchange Metro', ward: 'Dharampeth (Ward 2)', zone: 'Zone 2 (Dharampeth)', lat: 21.1466, lng: 79.0806 },
+  { name: 'Laxmi Nagar, 8-Rasta Chowk', landmark: 'Near VNIT Gate / Abhyankar Nagar', ward: 'Laxmi Nagar (Ward 1)', zone: 'Zone 1 (Laxmi Nagar)', lat: 21.1219, lng: 79.0669 },
+  { name: 'Civil Lines & High Court Bench', landmark: 'Palm Road / Judicial Enclave / Collectorate', ward: 'Civil Lines (Ward 2)', zone: 'Zone 2 (Dharampeth)', lat: 21.1578, lng: 79.0734 },
+  { name: 'Ramdaspeth & Central Bazaar Road', landmark: 'Near Hotel Centre Point / Lendra Park', ward: 'Dhantoli (Ward 4)', zone: 'Zone 4 (Dhantoli)', lat: 21.1352, lng: 79.0722 },
+  { name: 'Dhantoli & Congress Nagar', landmark: 'Near Rahate Colony Metro / Yashwant Stadium', ward: 'Dhantoli (Ward 4)', zone: 'Zone 4 (Dhantoli)', lat: 21.1287, lng: 79.0851 },
+  { name: 'Sadar Main Market & Residency Road', landmark: 'Near Liberty Cinema / Mount Road', ward: 'Mangalwari (Ward 10)', zone: 'Zone 10 (Mangalwari)', lat: 21.1645, lng: 79.0818 },
+  { name: 'Mangalwari & Clark Town', landmark: 'Sadar Bazar connecting link / Zonal Office', ward: 'Mangalwari (Ward 10)', zone: 'Zone 10 (Mangalwari)', lat: 21.1712, lng: 79.0834 },
+  { name: 'Mahal & Gandhi Gate Heritage', landmark: 'Old City Center / Tilak Statue / Town Hall', ward: 'Gandhibagh (Ward 6)', zone: 'Zone 6 (Gandhibagh)', lat: 21.1441, lng: 79.1098 },
+  { name: 'Gandhibagh & Central Avenue', landmark: 'Near Agrasen Chowk / Dosar Bhavan', ward: 'Gandhibagh (Ward 6)', zone: 'Zone 6 (Gandhibagh)', lat: 21.1502, lng: 79.1012 },
+  { name: 'Itwari Wholesale Market', landmark: 'Near Shahid Chowk / Kirana Oli / Sarafa', ward: 'Sataranjipura (Ward 7)', zone: 'Zone 7 (Sataranjipura)', lat: 21.1542, lng: 79.1165 },
+  { name: 'Manish Nagar Main T-Point', landmark: 'Near Railway Crossing / Somalwada Link', ward: 'Laxmi Nagar (Ward 1)', zone: 'Zone 1 (Laxmi Nagar)', lat: 21.0963, lng: 79.0772 },
+  { name: 'Pratap Nagar & Khamla Road', landmark: 'Near Orange City Hospital / Ring Road', ward: 'Laxmi Nagar (Ward 1)', zone: 'Zone 1 (Laxmi Nagar)', lat: 21.1182, lng: 79.0545 },
+  { name: 'Trimurti Nagar & Ring Road', landmark: 'Near NIT Garden / Subhash Nagar Link', ward: 'Laxmi Nagar (Ward 1)', zone: 'Zone 1 (Laxmi Nagar)', lat: 21.1124, lng: 79.0498 },
+  { name: 'Medical Square & GMC Hospital', landmark: 'Government Medical College Gate / Ajni Link', ward: 'Hanuman Nagar (Ward 3)', zone: 'Zone 3 (Hanuman Nagar)', lat: 21.1345, lng: 79.0961 },
+  { name: 'Hanuman Nagar & Reshimbagh', landmark: 'Near Suresh Bhat Hall / KDK Road', ward: 'Hanuman Nagar (Ward 3)', zone: 'Zone 3 (Hanuman Nagar)', lat: 21.1278, lng: 79.1042 },
+  { name: 'Nandanvan Main Chowk & Water Tank', landmark: 'Near KDK College / Hasanbagh Link', ward: 'Nehru Nagar (Ward 5)', zone: 'Zone 5 (Nehru Nagar)', lat: 21.1365, lng: 79.1302 },
+  { name: 'Sakkardara Square & Lake', landmark: 'Near Sakkardara Flyover / Ayurvedic College', ward: 'Nehru Nagar (Ward 5)', zone: 'Zone 5 (Nehru Nagar)', lat: 21.1215, lng: 79.1189 },
+  { name: 'Kalamna Market Yard, Lakadganj', landmark: 'Central Agriculture Produce Hub / Ring Road', ward: 'Lakadganj (Ward 8)', zone: 'Zone 8 (Lakadganj)', lat: 21.1685, lng: 79.1458 },
+  { name: 'Pardi Square & Bhandara Road', landmark: 'Near Kapsi Flyover / East Entrance', ward: 'Lakadganj (Ward 8)', zone: 'Zone 8 (Lakadganj)', lat: 21.1512, lng: 79.1582 },
+  { name: 'Jaripatka Main Market Road', landmark: 'Near Dayanand Park / Sindhi Colony, North Nagpur', ward: 'Mangalwari (Ward 10)', zone: 'Zone 10 (Mangalwari)', lat: 21.1895, lng: 79.0912 },
+  { name: 'Ashi Nagar & Indora Chowk', landmark: 'Near Dr. Ambedkar College / Kamptee Road', ward: 'Ashi Nagar (Ward 9)', zone: 'Zone 9 (Ashi Nagar)', lat: 21.1764, lng: 79.1045 },
+  { name: 'Panchpaoli & Kamal Talkies Chowk', landmark: 'Overbridge / Golibar Chowk', ward: 'Sataranjipura (Ward 7)', zone: 'Zone 7 (Sataranjipura)', lat: 21.1632, lng: 79.1095 },
+  { name: 'Besa & Pipla Road, South Nagpur', landmark: 'Near Manewada Chowk / Besa Square', ward: 'Hanuman Nagar (Ward 3)', zone: 'Zone 3 (Hanuman Nagar)', lat: 21.0825, lng: 79.0945 }
 ];
+
+// Helper to find closest locality to any lat/lng
+export const findClosestLocality = (lat: number, lng: number): NagpurLocation => {
+  let closest = NAGPUR_LOCALITIES[0];
+  let minDistance = Infinity;
+
+  NAGPUR_LOCALITIES.forEach((loc) => {
+    const d = Math.sqrt(Math.pow(loc.lat - lat, 2) + Math.pow(loc.lng - lng, 2));
+    if (d < minDistance) {
+      minDistance = d;
+      closest = loc;
+    }
+  });
+
+  return closest;
+};
+
+// Create custom crisp SVG marker for Leaflet
+const createPinIcon = (isGps: boolean = false, isConfirmed: boolean = false) => {
+  const color = isConfirmed ? '#10B981' : isGps ? '#059669' : '#EF4444';
+  const svg = `
+    <div style="position: relative; width: 38px; height: 44px; display: flex; align-items: center; justify-content: center;">
+      <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 16px; height: 7px; background: rgba(0,0,0,0.35); border-radius: 50%; filter: blur(2px);"></div>
+      <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 34px; height: 40px; display: flex; flex-direction: column; align-items: center;">
+        <svg viewBox="0 0 24 24" width="34" height="40" style="filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45));">
+          <path fill="${color}" stroke="#FFFFFF" stroke-width="1.75" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+          <circle cx="12" cy="9" r="3.5" fill="#FFFFFF"/>
+        </svg>
+      </div>
+    </div>
+  `;
+  return L.divIcon({
+    html: svg,
+    className: 'custom-nagpur-pin',
+    iconSize: [38, 44],
+    iconAnchor: [19, 40],
+    popupAnchor: [0, -40],
+  });
+};
 
 interface NagpurMapViewerProps {
   selectedLocation: string;
   selectedWard?: string;
+  lat?: number;
+  lng?: number;
   onSelectLocation?: (loc: NagpurLocation) => void;
+  onConfirmSpot?: (loc: NagpurLocation) => void;
   height?: string;
   interactive?: boolean;
 }
@@ -36,11 +102,31 @@ interface NagpurMapViewerProps {
 export const NagpurMapViewer: React.FC<NagpurMapViewerProps> = ({
   selectedLocation,
   selectedWard,
+  lat,
+  lng,
   onSelectLocation,
-  height = 'h-48',
+  onConfirmSpot,
+  height = 'h-72',
   interactive = true,
 }) => {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const accuracyCircleRef = useRef<L.Circle | null>(null);
+  const lastInternalCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
+
   const [activeItem, setActiveItem] = useState<NagpurLocation>(() => {
+    if (lat && lng) {
+      const closest = findClosestLocality(lat, lng);
+      return {
+        name: selectedLocation || closest.name,
+        landmark: closest.landmark,
+        ward: selectedWard || closest.ward,
+        zone: closest.zone,
+        lat,
+        lng,
+      };
+    }
     const found = NAGPUR_LOCALITIES.find(
       (l) => l.name.toLowerCase().includes(selectedLocation.toLowerCase()) || selectedLocation.toLowerCase().includes(l.name.toLowerCase())
     );
@@ -48,141 +134,471 @@ export const NagpurMapViewer: React.FC<NagpurMapViewerProps> = ({
   });
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
+  const [gpsStatusMsg, setGpsStatusMsg] = useState<string | null>(null);
+  const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
+  const [matchingSuggestions, setMatchingSuggestions] = useState<NagpurLocation[]>([]);
+  const [mapTileStyle, setMapTileStyle] = useState<'streets' | 'satellite'>('streets');
+  const [confirmedSpotState, setConfirmedSpotState] = useState(false);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
 
-  const handlePinClick = (loc: NagpurLocation) => {
+  // Initialize Leaflet Map
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    if (!mapInstanceRef.current) {
+      const initialLat = activeItem.lat || 21.1458;
+      const initialLng = activeItem.lng || 79.0882;
+
+      const map = L.map(mapContainerRef.current, {
+        center: [initialLat, initialLng],
+        zoom: 15,
+        zoomControl: false,
+        attributionControl: false,
+      });
+
+      // Default OpenStreetMap high-speed tile layer
+      const streetsLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(map);
+
+      tileLayerRef.current = streetsLayer;
+
+      // Create Draggable Pin
+      const pin = L.marker([initialLat, initialLng], {
+        icon: createPinIcon(false, false),
+        draggable: interactive,
+        autoPan: true,
+      }).addTo(map);
+
+      // Handle Pin Dragging in Real-Time
+      if (interactive) {
+        pin.on('dragend', (e) => {
+          const marker = e.target;
+          const pos = marker.getLatLng();
+          setConfirmedSpotState(false);
+          handleUpdateCoordinates(pos.lat, pos.lng, false);
+        });
+
+        // Click anywhere on real map to move pin accurately
+        map.on('click', (e: L.LeafletMouseEvent) => {
+          const { lat: clickLat, lng: clickLng } = e.latlng;
+          pin.setLatLng([clickLat, clickLng]);
+          setConfirmedSpotState(false);
+          handleUpdateCoordinates(clickLat, clickLng, false);
+        });
+      }
+
+      markerRef.current = pin;
+      mapInstanceRef.current = map;
+
+      // Trigger resize after mount
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 200);
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update tile layer style (Street vs Satellite)
+  const handleToggleTileStyle = () => {
+    if (!mapInstanceRef.current || !tileLayerRef.current) return;
+
+    mapInstanceRef.current.removeLayer(tileLayerRef.current);
+
+    if (mapTileStyle === 'streets') {
+      const satLayer = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 18 }
+      ).addTo(mapInstanceRef.current);
+      tileLayerRef.current = satLayer;
+      setMapTileStyle('satellite');
+    } else {
+      const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(mapInstanceRef.current);
+      tileLayerRef.current = streetLayer;
+      setMapTileStyle('streets');
+    }
+  };
+
+  // Sync external selectedLocation/lat/lng changes safely without snapping back user's custom pins
+  useEffect(() => {
+    if (!mapInstanceRef.current || !markerRef.current) return;
+
+    // Check if the change came from internal click/drag
+    if (
+      lastInternalCoordsRef.current &&
+      lat &&
+      lng &&
+      Math.abs(lastInternalCoordsRef.current.lat - lat) < 0.0001 &&
+      Math.abs(lastInternalCoordsRef.current.lng - lng) < 0.0001
+    ) {
+      return;
+    }
+
+    if (lat && lng) {
+      const closest = findClosestLocality(lat, lng);
+      const newLoc: NagpurLocation = {
+        name: selectedLocation || closest.name,
+        landmark: closest.landmark,
+        ward: selectedWard || closest.ward,
+        zone: closest.zone,
+        lat,
+        lng,
+      };
+      setActiveItem(newLoc);
+      markerRef.current.setLatLng([lat, lng]);
+      mapInstanceRef.current.panTo([lat, lng]);
+      return;
+    }
+
+    if (selectedLocation) {
+      // Don't snap back if active item already reflects this name or is a custom pinned spot
+      if (
+        activeItem.name === selectedLocation ||
+        selectedLocation.includes('(Pinned Spot)') ||
+        selectedLocation.includes('GPS')
+      ) {
+        return;
+      }
+
+      const found = NAGPUR_LOCALITIES.find(
+        (l) => l.name.toLowerCase().includes(selectedLocation.toLowerCase()) || selectedLocation.toLowerCase().includes(l.name.toLowerCase())
+      );
+      if (found && (Math.abs(found.lat - activeItem.lat) > 0.0001 || Math.abs(found.lng - activeItem.lng) > 0.0001)) {
+        setActiveItem(found);
+        markerRef.current.setLatLng([found.lat, found.lng]);
+        mapInstanceRef.current.panTo([found.lat, found.lng]);
+      }
+    }
+  }, [selectedLocation, lat, lng]);
+
+  // Coordinate updater with reverse geocoding & closest ward matching
+  const handleUpdateCoordinates = async (newLat: number, newLng: number, isGps: boolean = false) => {
+    const roundedLat = Math.round(newLat * 100000) / 100000;
+    const roundedLng = Math.round(newLng * 100000) / 100000;
+    lastInternalCoordsRef.current = { lat: roundedLat, lng: roundedLng };
+
+    const closest = findClosestLocality(roundedLat, roundedLng);
+    setIsReverseGeocoding(true);
+
+    const preliminaryLoc: NagpurLocation = {
+      name: `${closest.name.split(',')[0]} (Pinned Spot)`,
+      landmark: isGps ? `Live Device GPS Pin` : `Selected Point near ${closest.landmark}`,
+      ward: closest.ward,
+      zone: closest.zone,
+      lat: roundedLat,
+      lng: roundedLng,
+    };
+
+    setActiveItem(preliminaryLoc);
+    if (onSelectLocation) {
+      onSelectLocation(preliminaryLoc);
+    }
+
+    // Call OpenStreetMap Nominatim for exact street-level address in Nagpur
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${roundedLat}&lon=${roundedLng}&zoom=18&addressdetails=1`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.display_name) {
+          const addr = data.address || {};
+          const road = addr.road || addr.suburb || addr.neighbourhood || addr.quarter || addr.residential || '';
+          const area = addr.suburb || addr.city_district || closest.name.split(',')[0];
+          const cleanName = [road, area, 'Nagpur'].filter(Boolean).join(', ') || data.display_name.split(',').slice(0, 3).join(', ');
+
+          const resolvedLoc: NagpurLocation = {
+            ...preliminaryLoc,
+            name: cleanName || preliminaryLoc.name,
+            landmark: addr.amenity || addr.shop || addr.building || preliminaryLoc.landmark,
+          };
+
+          setActiveItem(resolvedLoc);
+          if (onSelectLocation) {
+            onSelectLocation(resolvedLoc);
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore network errors, fallback to closest locality
+    } finally {
+      setIsReverseGeocoding(false);
+    }
+  };
+
+  // Real-time device GPS Geolocation
+  const handleLocateMe = () => {
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      setGpsStatusMsg('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    setIsLocating(true);
+    setGpsStatusMsg('Acquiring high-accuracy GPS fix...');
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const currentLat = pos.coords.latitude;
+        const currentLng = pos.coords.longitude;
+        const accuracy = Math.round(pos.coords.accuracy);
+
+        if (mapInstanceRef.current && markerRef.current) {
+          markerRef.current.setLatLng([currentLat, currentLng]);
+          markerRef.current.setIcon(createPinIcon(true, false));
+          mapInstanceRef.current.setView([currentLat, currentLng], 16, { animate: true });
+
+          // Accuracy radius circle
+          if (accuracyCircleRef.current) {
+            accuracyCircleRef.current.remove();
+          }
+          accuracyCircleRef.current = L.circle([currentLat, currentLng], {
+            radius: Math.max(accuracy, 20),
+            color: '#10B981',
+            fillColor: '#10B981',
+            fillOpacity: 0.15,
+            weight: 1.5,
+          }).addTo(mapInstanceRef.current);
+        }
+
+        setGpsStatusMsg(`GPS Fixed (Accuracy ±${accuracy}m)`);
+        handleUpdateCoordinates(currentLat, currentLng, true);
+      },
+      (err) => {
+        setIsLocating(false);
+        setGpsStatusMsg(`GPS signal unavailable (${err.message}). Showing center.`);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  // Search locality
+  const handleSearchChange = (q: string) => {
+    setSearchQuery(q);
+    if (!q.trim()) {
+      setMatchingSuggestions([]);
+      return;
+    }
+    const filtered = NAGPUR_LOCALITIES.filter(
+      (l) =>
+        l.name.toLowerCase().includes(q.toLowerCase()) ||
+        l.ward.toLowerCase().includes(q.toLowerCase()) ||
+        l.landmark.toLowerCase().includes(q.toLowerCase())
+    );
+    setMatchingSuggestions(filtered.slice(0, 5));
+  };
+
+  const handleSelectSuggestion = (loc: NagpurLocation) => {
+    setSearchQuery('');
+    setMatchingSuggestions([]);
+    setConfirmedSpotState(false);
     setActiveItem(loc);
+    lastInternalCoordsRef.current = { lat: loc.lat, lng: loc.lng };
+
+    if (mapInstanceRef.current && markerRef.current) {
+      markerRef.current.setLatLng([loc.lat, loc.lng]);
+      markerRef.current.setIcon(createPinIcon(false, false));
+      mapInstanceRef.current.setView([loc.lat, loc.lng], 16, { animate: true });
+    }
+
     if (onSelectLocation) {
       onSelectLocation(loc);
     }
   };
 
-  const filtered = NAGPUR_LOCALITIES.filter(
-    (l) =>
-      l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.ward.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.landmark.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleZoomIn = () => {
+    if (mapInstanceRef.current) mapInstanceRef.current.zoomIn();
+  };
+
+  const handleZoomOut = () => {
+    if (mapInstanceRef.current) mapInstanceRef.current.zoomOut();
+  };
+
+  const handleResetNagpurCenter = () => {
+    if (mapInstanceRef.current && markerRef.current) {
+      const def = NAGPUR_LOCALITIES[0];
+      setActiveItem(def);
+      setConfirmedSpotState(false);
+      lastInternalCoordsRef.current = { lat: def.lat, lng: def.lng };
+      markerRef.current.setLatLng([def.lat, def.lng]);
+      markerRef.current.setIcon(createPinIcon(false, false));
+      mapInstanceRef.current.setView([21.1458, 79.0882], 14, { animate: true });
+      if (onSelectLocation) onSelectLocation(def);
+    }
+  };
+
+  // Explicit Confirm Spot Action
+  const handleConfirmSpotClick = () => {
+    setConfirmedSpotState(true);
+    if (markerRef.current) {
+      markerRef.current.setIcon(createPinIcon(false, true));
+    }
+    if (onSelectLocation) {
+      onSelectLocation(activeItem);
+    }
+    if (onConfirmSpot) {
+      onConfirmSpot(activeItem);
+    }
+  };
 
   return (
-    <div className={`w-full ${height} bg-slate-900 rounded-xl overflow-hidden relative border border-slate-700 select-none flex flex-col justify-between shadow-inner`}>
-      {/* Map Graphic Layer (Stylized OSM / Satellite hybrid) */}
-      <div className="absolute inset-0 bg-[#0F172A]">
-        {/* Background Grid & Streets */}
-        <svg className="w-full h-full object-cover opacity-80" viewBox="0 0 600 300" preserveAspectRatio="none">
-          <defs>
-            <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-              <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1E293B" strokeWidth="1" />
-            </pattern>
-          </defs>
-          <rect width="600" height="300" fill="url(#grid)" />
-          
-          {/* Ambazari Lake / Futala Lake waterbodies */}
-          <ellipse cx="140" cy="190" rx="45" ry="30" fill="#0369A1" opacity="0.4" />
-          <text x="110" y="195" fill="#38BDF8" fontSize="9" fontWeight="bold">Ambazari Lake</text>
-          
-          <ellipse cx="120" cy="90" rx="35" ry="20" fill="#0369A1" opacity="0.4" />
-          <text x="100" y="94" fill="#38BDF8" fontSize="8" fontWeight="bold">Futala Lake</text>
+    <div className={`w-full ${height} bg-slate-900 rounded-2xl overflow-hidden relative border border-slate-700 select-none flex flex-col justify-between shadow-lg group`}>
+      {/* Map Container for Leaflet */}
+      <div 
+        ref={mapContainerRef} 
+        className="w-full h-full absolute inset-0 z-0 bg-slate-950" 
+        style={{ cursor: interactive ? 'crosshair' : 'default' }}
+      />
 
-          <ellipse cx="440" cy="180" rx="35" ry="22" fill="#0369A1" opacity="0.35" />
-          <text x="415" y="184" fill="#38BDF8" fontSize="8" fontWeight="bold">Sakkardara</text>
+      {/* Top Controls Overlay */}
+      <div className="relative z-10 p-2.5 sm:p-3 flex flex-col gap-2 bg-gradient-to-b from-black/85 via-black/40 to-transparent pointer-events-none">
+        <div className="flex items-center justify-between gap-2 pointer-events-auto">
+          {/* Search Box */}
+          <div className="relative flex-1 max-w-xs sm:max-w-sm">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Search Nagpur spot (Sitabuldi, Sadar, Mahal...)"
+              className="w-full pl-8.5 pr-3 py-1.5 bg-black/75 hover:bg-black/90 focus:bg-black text-white placeholder:text-slate-400 rounded-xl text-xs border border-white/20 focus:border-blue-400 focus:outline-hidden backdrop-blur-md transition-all shadow-md"
+            />
 
-          {/* Primary Arterial Road Networks (Nagpur Ring Roads & West High Court Rd) */}
-          <path d="M 0,150 Q 200,140 600,160" stroke="#475569" strokeWidth="9" fill="none" />
-          <path d="M 0,150 Q 200,140 600,160" stroke="#CBD5E1" strokeWidth="3" strokeDasharray="6 4" fill="none" />
-          
-          {/* North-South corridor (Wardha Road / Metro Line) */}
-          <path d="M 280,0 L 290,300" stroke="#F59E0B" strokeWidth="7" fill="none" opacity="0.8" />
-          <path d="M 280,0 L 290,300" stroke="#FEF08A" strokeWidth="2" strokeDasharray="4 3" fill="none" />
-          <text x="295" y="40" fill="#FDE047" fontSize="8" fontWeight="bold" transform="rotate(85 295 40)">NMC Metro Corridor</text>
+            {/* Suggestions Dropdown */}
+            {matchingSuggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-slate-900/95 border border-slate-700 rounded-xl overflow-hidden shadow-2xl z-50 divide-y divide-slate-800 backdrop-blur-lg">
+                {matchingSuggestions.map((loc) => (
+                  <button
+                    key={loc.name}
+                    type="button"
+                    onClick={() => handleSelectSuggestion(loc)}
+                    className="w-full p-2.5 text-left text-xs hover:bg-blue-600/30 text-slate-200 transition-colors flex items-center justify-between cursor-pointer"
+                  >
+                    <div>
+                      <div className="font-bold text-white truncate">{loc.name.split(',')[0]}</div>
+                      <div className="text-[10px] text-slate-400 truncate">{loc.ward} • {loc.landmark}</div>
+                    </div>
+                    <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0 ml-2" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-          {/* Central Ring Road */}
-          <circle cx="300" cy="150" r="100" stroke="#334155" strokeWidth="5" fill="none" />
-          <path d="M 100,50 L 500,260" stroke="#334155" strokeWidth="4" fill="none" />
-          <path d="M 80,260 L 520,60" stroke="#334155" strokeWidth="4" fill="none" />
+          {/* Controls: GPS + Layer Toggle */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handleToggleTileStyle}
+              title={mapTileStyle === 'streets' ? 'Switch to Satellite' : 'Switch to Streets'}
+              className="p-1.5 bg-black/75 hover:bg-black text-slate-200 hover:text-white rounded-xl border border-white/20 backdrop-blur-md transition-colors cursor-pointer shadow-md"
+            >
+              <Layers className="w-4 h-4 text-amber-400" />
+            </button>
 
-          {/* Landmark Hotspot nodes */}
-          {NAGPUR_LOCALITIES.map((loc, idx) => {
-            // Map lat/lng relative to Nagpur bounding box
-            const x = 50 + ((loc.lng - 79.05) / 0.12) * 480;
-            const y = 260 - ((loc.lat - 21.08) / 0.11) * 220;
-            const isSelected = activeItem.name === loc.name;
-
-            return (
-              <g key={loc.name} className="cursor-pointer transition-all" onClick={() => handlePinClick(loc)}>
-                {isSelected && (
-                  <circle cx={x} cy={y} r="16" fill="#EF4444" opacity="0.3" className="animate-ping" />
-                )}
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={isSelected ? "8" : "5"}
-                  fill={isSelected ? "#EF4444" : "#38BDF8"}
-                  stroke="#FFFFFF"
-                  strokeWidth={isSelected ? "2.5" : "1.5"}
-                />
-                <text
-                  x={x + 10}
-                  y={y + 4}
-                  fill={isSelected ? "#FFFFFF" : "#94A3B8"}
-                  fontSize={isSelected ? "11" : "9"}
-                  fontWeight={isSelected ? "bold" : "normal"}
-                  className="drop-shadow-md pointer-events-none"
-                >
-                  {loc.name.split(',')[0]}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-
-      {/* Top Header Overlay with Zone & Live Accuracy */}
-      <div className="relative z-10 p-3 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[11px] font-bold text-slate-200 tracking-wide">
-            NMC Spatial GIS • Nagpur Municipal Corporation
-          </span>
-        </div>
-        <div className="flex items-center gap-1 text-[10px] font-semibold bg-blue-900/60 text-blue-200 border border-blue-700/50 px-2 py-0.5 rounded-md backdrop-blur-xs">
-          <Compass className="w-3 h-3 text-blue-300" />
-          <span>GPS Fix (±4m)</span>
-        </div>
-      </div>
-
-      {/* Center Pin Indicator */}
-      <div className="relative z-10 flex-1 flex items-center justify-center pointer-events-none">
-        <div className="flex flex-col items-center">
-          <div className="bg-red-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-lg border border-white/80 animate-bounce flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5" />
-            <span>{activeItem.name.split(',')[0]}</span>
+            <button
+              type="button"
+              onClick={handleLocateMe}
+              disabled={isLocating}
+              className="flex items-center gap-1 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50 active:scale-95"
+            >
+              <LocateFixed className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{isLocating ? 'Fixing GPS...' : 'My Live GPS'}</span>
+              <span className="sm:hidden">{isLocating ? 'GPS...' : 'GPS'}</span>
+            </button>
           </div>
         </div>
+
+        {/* Status notice if any */}
+        {gpsStatusMsg && (
+          <div className="self-start text-[10px] font-bold text-emerald-300 bg-black/80 px-2.5 py-0.5 rounded-lg border border-emerald-500/30 backdrop-blur-sm">
+            {gpsStatusMsg}
+          </div>
+        )}
+      </div>
+
+      {/* Floating Zoom & Center Controls on Right */}
+      <div className="absolute right-3 top-16 z-10 flex flex-col gap-1 pointer-events-auto">
+        <button
+          type="button"
+          onClick={handleZoomIn}
+          className="w-8 h-8 rounded-lg bg-black/80 hover:bg-black text-white flex items-center justify-center border border-white/20 shadow-md transition-colors cursor-pointer backdrop-blur-sm"
+          title="Zoom In"
+        >
+          <ZoomIn className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={handleZoomOut}
+          className="w-8 h-8 rounded-lg bg-black/80 hover:bg-black text-white flex items-center justify-center border border-white/20 shadow-md transition-colors cursor-pointer backdrop-blur-sm"
+          title="Zoom Out"
+        >
+          <ZoomOut className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={handleResetNagpurCenter}
+          className="w-8 h-8 rounded-lg bg-black/80 hover:bg-black text-slate-300 hover:text-white flex items-center justify-center border border-white/20 shadow-md transition-colors cursor-pointer backdrop-blur-sm"
+          title="Reset Nagpur View"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {/* Bottom Pinned Location Banner */}
-      <div className="relative z-10 p-2.5 bg-slate-900/90 backdrop-blur-md border-t border-slate-700/80 flex items-center justify-between">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-red-600/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30">
-            <MapPin className="w-4 h-4 text-red-400" />
+      <div className="relative z-10 p-2.5 sm:p-3 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border transition-all ${
+            confirmedSpotState 
+              ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/40' 
+              : 'bg-red-600/20 text-red-400 border-red-500/40'
+          }`}>
+            {confirmedSpotState ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <MapPin className="w-4 h-4 text-red-400" />
+            )}
           </div>
-          <div className="min-w-0">
-            <div className="text-xs font-bold text-white truncate">
-              {activeItem.name}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-white truncate">
+                {activeItem.name}
+              </span>
+              {isReverseGeocoding && (
+                <span className="text-[10px] text-blue-400 animate-pulse font-mono shrink-0">
+                  (resolving...)
+                </span>
+              )}
             </div>
-            <div className="text-[10px] text-slate-400 truncate">
-              {activeItem.ward} • {activeItem.landmark}
+            <div className="text-[10px] text-slate-300 truncate">
+              {activeItem.ward} • {activeItem.lat.toFixed(5)}°N, {activeItem.lng.toFixed(5)}°E
             </div>
           </div>
         </div>
 
-        {interactive && onSelectLocation && (
+        {interactive && (
           <button
-            onClick={() => onSelectLocation(activeItem)}
-            className="ml-2 shrink-0 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold rounded-md shadow-xs transition-colors cursor-pointer flex items-center gap-1"
+            type="button"
+            onClick={handleConfirmSpotClick}
+            className={`shrink-0 px-4 py-2 text-xs font-bold rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+              confirmedSpotState
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-2 ring-emerald-400 ring-offset-1 ring-offset-slate-900'
+                : 'bg-blue-600 hover:bg-blue-500 text-white animate-pulse hover:animate-none'
+            }`}
+            id="btn-confirm-map-spot"
           >
-            <Check className="w-3 h-3" />
-            <span>Confirm Spot</span>
+            <Check className="w-4 h-4 stroke-[3]" />
+            <span>{confirmedSpotState ? 'Spot Confirmed! ✓' : 'Confirm Spot'}</span>
           </button>
         )}
       </div>

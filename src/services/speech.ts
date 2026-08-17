@@ -123,15 +123,15 @@ export class SpeechService {
         let matchedVoice = null;
         if (targetLang === 'mr-IN') {
           matchedVoice =
-            voices.find((v) => v.lang.includes('mr') || v.name.toLowerCase().includes('marathi')) ||
-            voices.find((v) => v.lang.includes('hi') || v.name.toLowerCase().includes('hindi')) ||
+            voices.find((v) => v.lang.toLowerCase().startsWith('mr') || v.name.toLowerCase().includes('marathi')) ||
+            voices.find((v) => v.lang.toLowerCase().startsWith('hi') || v.name.toLowerCase().includes('hindi')) ||
             voices.find((v) => v.lang.includes('IN'));
         } else if (targetLang === 'hi-IN') {
           matchedVoice =
-            voices.find((v) => v.lang.includes('hi') || v.name.toLowerCase().includes('hindi') || v.name.toLowerCase().includes('lekha') || v.name.toLowerCase().includes('neerja')) ||
+            voices.find((v) => v.lang.toLowerCase().startsWith('hi') || v.name.toLowerCase().includes('hindi') || v.name.toLowerCase().includes('lekha') || v.name.toLowerCase().includes('neerja') || v.name.toLowerCase().includes('madhav')) ||
             voices.find((v) => v.lang.includes('IN'));
         } else {
-          matchedVoice = voices.find((v) => v.lang.includes('en-IN') || v.name.toLowerCase().includes('india'));
+          matchedVoice = voices.find((v) => v.lang.includes('en-IN') || v.name.toLowerCase().includes('india') || v.lang.startsWith('en'));
         }
 
         if (matchedVoice) {

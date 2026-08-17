@@ -1,14 +1,14 @@
 import { CaseItem, NotificationItem, UserProfile, UserRole } from '../types';
-import { INITIAL_CASES, INITIAL_NOTIFICATIONS, INITIAL_OFFICER, INITIAL_USER } from '../data/initialData';
+import { INITIAL_CASES, INITIAL_NOTIFICATIONS, INITIAL_USER } from '../data/initialData';
 import { FirebaseDataService } from './firebaseDataService';
 
 const STORAGE_KEYS = {
-  CASES: 'nagpursetu_cases_v3_clean',
-  NOTIFICATIONS: 'nagpursetu_notifications_v3_clean',
-  USER: 'nagpursetu_user_v3_clean',
-  ACTIVE_ROLE: 'nagpursetu_active_role_v3_clean',
-  CURRENT_LANGUAGE: 'nagpursetu_lang_v3_clean',
-  DRAFT_CHAT: 'nagpursetu_draft_chat_v3_clean',
+  CASES: 'nagpursetu_cases_v4_clean',
+  NOTIFICATIONS: 'nagpursetu_notifications_v4_clean',
+  USER: 'nagpursetu_user_v4_clean',
+  ACTIVE_ROLE: 'nagpursetu_active_role_v4_clean',
+  CURRENT_LANGUAGE: 'nagpursetu_lang_v4_clean',
+  DRAFT_CHAT: 'nagpursetu_draft_chat_v4_clean',
 };
 
 // Event listener mechanism for cross-component reactivity
@@ -42,8 +42,8 @@ let isCloudSynced = false;
 // Background listener for Cloud Firestore real-time updates
 if (typeof window !== 'undefined') {
   try {
+    // 1. Real-time cases subscription
     FirebaseDataService.subscribeToCases((firestoreCases) => {
-      // Cloud Firestore is the authoritative source of truth
       isCloudSynced = true;
       if (Array.isArray(firestoreCases)) {
         try {
@@ -54,8 +54,20 @@ if (typeof window !== 'undefined') {
         }
       }
     });
+
+    // 2. Real-time notifications subscription
+    FirebaseDataService.subscribeToNotifications((firestoreNotifs) => {
+      if (Array.isArray(firestoreNotifs)) {
+        try {
+          localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(firestoreNotifs));
+          notifyLocalListeners();
+        } catch (e) {
+          console.warn('Notification sync error:', e);
+        }
+      }
+    });
   } catch (e) {
-    console.warn('Firestore subscription init:', e);
+    console.warn('Firestore real-time subscription init:', e);
   }
 }
 
@@ -102,9 +114,8 @@ export const StorageService = {
       if (data !== null) {
         return JSON.parse(data);
       }
-      // First boot before cloud sync
-      localStorage.setItem(STORAGE_KEYS.CASES, JSON.stringify(INITIAL_CASES));
-      return INITIAL_CASES;
+      localStorage.setItem(STORAGE_KEYS.CASES, JSON.stringify([]));
+      return [];
     } catch (e) {
       console.error('Error loading cases:', e);
       return [];
@@ -146,12 +157,7 @@ export const StorageService = {
   },
 
   seedDemoCases: async (): Promise<void> => {
-    StorageService.saveCases(INITIAL_CASES);
-    try {
-      await FirebaseDataService.seedCases(INITIAL_CASES);
-    } catch (err) {
-      console.warn('Firestore seed error:', err);
-    }
+    StorageService.saveCases([]);
   },
 
   addCase: (newCase: CaseItem): CaseItem => {
@@ -266,10 +272,10 @@ export const StorageService = {
     if (isResolved) {
       const closeEvent = {
         id: `tl-${Date.now()}`,
-        title: 'Citizen Confirmed Resolution',
+        title: 'Citizen Confirmed Resolution (Yes)',
         timestamp: 'Just now',
-        actor: current.citizenName,
-        description: feedback || 'Citizen verified satisfactory completion of work. Case closed.',
+        actor: current.citizenName || 'Citizen',
+        description: feedback || 'Citizen verified problem has been solved on ground. Complaint marked verified & closed.',
         status: 'completed' as const,
         dotColor: 'green' as const,
       };
@@ -284,22 +290,90 @@ export const StorageService = {
         timeline: [...current.timeline, closeEvent],
       });
     } else {
-      return StorageService.reopenCase(id, feedback || 'Issue not resolved satisfactorily.');
+      return StorageService.reopenCase(id, feedback || 'Citizen indicated problem is still unresolved on ground.');
     }
   },
+
+  confirmProblemReport: (id: string, sessionId?: string): { success: boolean; caseItem?: CaseItem; alreadyConfirmed?: boolean } => {
+    const current = StorageService.getCaseById(id);
+    if (!current) return { success: false };
+
+    const actualSession = sessionId || 'civic_session_' + (typeof window !== 'undefined' ? (localStorage.getItem('nagpursetu_session_id') || (() => {
+      const newId = 'session_' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('nagpursetu_session_id', newId);
+      return newId;
+    })()) : 'anon');
+
+    const confirmedList = current.confirmedBySessions || [];
+    if (confirmedList.includes(actualSession)) {
+      return { success: true, caseItem: current, alreadyConfirmed: true };
+    }
+
+    const newCount = (current.confirmationsCount || 0) + 1;
+    const shouldEscalate = newCount >= 20 && current.priority === 'Normal';
+
+    const updatedTimeline = [...current.timeline];
+    if (shouldEscalate) {
+      updatedTimeline.push({
+        id: `tl-conf-${Date.now()}`,
+        title: 'High Community Confirmation Escalation',
+        timestamp: 'Just now',
+        description: `${newCount} local citizens confirmed this civic issue. Priority elevated to High.`,
+        status: 'completed',
+        dotColor: 'orange'
+      });
+    }
+
+    const updated = StorageService.updateCase(id, {
+      confirmationsCount: newCount,
+      confirmedBySessions: [...confirmedList, actualSession],
+      priority: shouldEscalate ? 'High' : current.priority,
+      timeline: updatedTimeline
+    });
+
+    return { success: true, caseItem: updated, alreadyConfirmed: false };
+  },
+
+  findNearbyDuplicates: (category: string, lat?: number, lng?: number, areaKeyword?: string): CaseItem[] => {
+    const cases = StorageService.getCases();
+    return cases.filter((c) => {
+      if (c.status === 'Resolved' || c.status === 'Closed') return false;
+      const sameCat = c.category.toLowerCase().includes(category.toLowerCase()) || category.toLowerCase().includes(c.category.toLowerCase());
+      if (!sameCat) return false;
+
+      if (lat && lng && c.lat && c.lng) {
+        // Approximate distance calculation within ~1.5km
+        const dLat = Math.abs(c.lat - lat);
+        const dLng = Math.abs(c.lng - lng);
+        if (dLat < 0.015 && dLng < 0.015) {
+          return true;
+        }
+      }
+
+      if (areaKeyword && areaKeyword.trim().length > 3) {
+        const needle = areaKeyword.toLowerCase().trim();
+        if (c.location.toLowerCase().includes(needle) || (c.ward && c.ward.toLowerCase().includes(needle))) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+  },
+
 
   // Notifications
   getNotifications: (): NotificationItem[] => {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
       if (!data) {
-        localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(INITIAL_NOTIFICATIONS));
-        return INITIAL_NOTIFICATIONS;
+        localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([]));
+        return [];
       }
       return JSON.parse(data);
     } catch (e) {
       console.error('Error getting notifications:', e);
-      return INITIAL_NOTIFICATIONS;
+      return [];
     }
   },
 
@@ -312,13 +386,24 @@ export const StorageService = {
     } catch (e) {
       console.error('Error adding notification:', e);
     }
+
+    FirebaseDataService.saveNotification(notification).catch((err) => {
+      console.warn('Firestore notification save notice:', err);
+    });
   },
 
   markNotificationAsRead: (id: string): void => {
     const list = StorageService.getNotifications();
+    const target = list.find((n) => n.id === id);
     const updated = list.map((n) => (n.id === id ? { ...n, read: true } : n));
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(updated));
     notifyListeners();
+
+    if (target) {
+      FirebaseDataService.saveNotification({ ...target, read: true }).catch((err) => {
+        console.warn('Firestore notification update notice:', err);
+      });
+    }
   },
 
   markAllNotificationsAsRead: (): void => {
@@ -326,15 +411,15 @@ export const StorageService = {
     const updated = list.map((n) => ({ ...n, read: true }));
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(updated));
     notifyListeners();
+
+    updated.forEach((n) => {
+      FirebaseDataService.saveNotification(n).catch(console.warn);
+    });
   },
 
   // User & Active Role
   getUser: (): UserProfile => {
     try {
-      const role = StorageService.getActiveRole();
-      if (role === 'officer' || role === 'admin') {
-        return INITIAL_OFFICER;
-      }
       const data = localStorage.getItem(STORAGE_KEYS.USER);
       if (!data) {
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(INITIAL_USER));
@@ -356,15 +441,7 @@ export const StorageService = {
   },
 
   getActiveRole: (): UserRole => {
-    try {
-      const role = localStorage.getItem(STORAGE_KEYS.ACTIVE_ROLE);
-      if (role === 'officer' || role === 'admin' || role === 'citizen') {
-        return role as UserRole;
-      }
-      return 'citizen';
-    } catch (e) {
-      return 'citizen';
-    }
+    return 'citizen';
   },
 
   setActiveRole: (role: UserRole): void => {
@@ -386,10 +463,10 @@ export const StorageService = {
   },
 
   resetDemoData: (): void => {
-    localStorage.setItem(STORAGE_KEYS.CASES, JSON.stringify(INITIAL_CASES));
-    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(INITIAL_NOTIFICATIONS));
+    localStorage.setItem(STORAGE_KEYS.CASES, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(INITIAL_USER));
     notifyListeners();
-    FirebaseDataService.seedCases(INITIAL_CASES).catch((e) => console.warn('Reset seed warning:', e));
+    FirebaseDataService.clearAllCases().catch((e) => console.warn('Reset clear warning:', e));
   }
 };

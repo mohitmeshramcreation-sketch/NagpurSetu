@@ -4,32 +4,22 @@ import { Footer } from './components/Footer';
 import { HomeScreen } from './components/HomeScreen';
 import { TalkScreen } from './components/TalkScreen';
 import { ReviewScreen } from './components/ReviewScreen';
-import { AdminDashboard } from './components/AdminDashboard';
-import { AnalyticsScreen } from './components/AnalyticsScreen';
 import { MyCasesScreen } from './components/MyCasesScreen';
 import { NotificationsScreen } from './components/NotificationsScreen';
 import { ProfileScreen } from './components/ProfileScreen';
 import { ServicesScreen } from './components/ServicesScreen';
-import { WorkflowsScreen } from './components/WorkflowsScreen';
+import { SchemesScreen } from './components/SchemesScreen';
+import { CertificatesScreen } from './components/CertificatesScreen';
+import { ComplaintsScreen } from './components/ComplaintsScreen';
 import { HotspotsScreen } from './components/HotspotsScreen';
 import { CaseDetailModal } from './components/CaseDetailModal';
-import { EmergencyAlertModal } from './components/EmergencyAlertModal';
-import { AuthModal } from './components/AuthModal';
 import { StorageService } from './services/storage';
-import { CaseItem, Department, MunicipalService, UserRole } from './types';
+import { CaseItem, Department, MunicipalService } from './types';
 
 export function App() {
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
     return window.location.hash ? window.location.hash.replace('#', '') || '/' : '/';
   });
-
-  const [activeRole, setActiveRole] = useState<UserRole>(() => {
-    return StorageService.getActiveRole();
-  });
-
-  // Authentication modal state
-  const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
-  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
 
   // Draft report passed from TalkScreen to ReviewScreen
   const [draftReport, setDraftReport] = useState<{
@@ -44,7 +34,6 @@ export function App() {
 
   // Active modal states
   const [selectedCaseModal, setSelectedCaseModal] = useState<CaseItem | null>(null);
-  const [emergencyModalOpen, setEmergencyModalOpen] = useState(false);
   const [helpModalOpen, setHelpModalOpen] = useState(false);
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
@@ -64,11 +53,6 @@ export function App() {
     window.location.hash = route;
     setCurrentRoute(route);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleRoleChange = (role: UserRole) => {
-    setActiveRole(role);
-    StorageService.setActiveRole(role);
   };
 
   const handleProceedToReview = (draft: {
@@ -149,8 +133,6 @@ export function App() {
       return (
         <ProfileScreen
           navigate={navigate}
-          activeRole={activeRole}
-          onRoleChange={handleRoleChange}
         />
       );
     }
@@ -164,33 +146,33 @@ export function App() {
       );
     }
 
-    // Officer / Admin routes
-    if (currentRoute === '/officer' || currentRoute === '/admin') {
+    if (currentRoute === '/schemes') {
       return (
-        <AdminDashboard
-          navigate={navigate}
-          onOpenEmergencyModal={() => setEmergencyModalOpen(true)}
-        />
-      );
-    }
-
-    if (currentRoute === '/officer/analytics' || currentRoute === '/admin/analytics') {
-      return (
-        <AnalyticsScreen
+        <SchemesScreen
           navigate={navigate}
         />
       );
     }
 
-    if (currentRoute === '/officer/workflows' || currentRoute === '/admin/workflows') {
+    if (currentRoute === '/certificates') {
       return (
-        <WorkflowsScreen
+        <CertificatesScreen
           navigate={navigate}
         />
       );
     }
 
-    if (currentRoute === '/officer/hotspots' || currentRoute === '/admin/hotspots') {
+    if (currentRoute === '/complaints' || currentRoute.startsWith('/complaints')) {
+      const trackingIdMatch = currentRoute.startsWith('/complaints/') ? currentRoute.replace('/complaints/', '') : undefined;
+      return (
+        <ComplaintsScreen
+          navigate={navigate}
+          initialTrackingId={trackingIdMatch}
+        />
+      );
+    }
+
+    if (currentRoute === '/hotspots') {
       return (
         <HotspotsScreen
           navigate={navigate}
@@ -213,12 +195,6 @@ export function App() {
       <Navbar
         currentRoute={currentRoute}
         navigate={navigate}
-        activeRole={activeRole}
-        onRoleChange={handleRoleChange}
-        onOpenAuthModal={(mode) => {
-          setAuthModalMode(mode);
-          setAuthModalOpen(true);
-        }}
       />
 
       {/* Main Screen Content */}
@@ -234,16 +210,6 @@ export function App() {
         onOpenAccessibility={() => navigate('/profile')}
       />
 
-      {/* Firebase Authentication Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        initialMode={authModalMode}
-        onClose={() => setAuthModalOpen(false)}
-        onSuccess={() => {
-          setActiveRole(StorageService.getActiveRole());
-        }}
-      />
-
       {/* Case Details Modal */}
       {selectedCaseModal && (
         <CaseDetailModal
@@ -252,13 +218,6 @@ export function App() {
           onCaseUpdated={(updated) => {
             setSelectedCaseModal(updated);
           }}
-        />
-      )}
-
-      {/* Emergency Broadcast Alert Modal */}
-      {emergencyModalOpen && (
-        <EmergencyAlertModal
-          onClose={() => setEmergencyModalOpen(false)}
         />
       )}
 
